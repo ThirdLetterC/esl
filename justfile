@@ -13,3 +13,8 @@ run: build
 
 clean:
     rm -rf zig-out .zig-cache
+
+format:
+    clang-format -i src/include/*.h src/*.c testclient.c
+
+fmt: format

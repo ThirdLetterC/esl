@@ -1319,7 +1319,7 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event) {
       goto fail;
     }
 
-    auto *body = (char *)calloc((size_t)len + 1, sizeof(char));
+    auto body = (char *)calloc((size_t)len + 1, sizeof(char));
     if (body == nullptr) {
       esl_event_destroy(&revent);
       goto fail;

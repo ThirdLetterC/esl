@@ -1,7 +1,7 @@
 #include "esl_json.h"
 
 [[nodiscard]] ESL_DECLARE(const char *)
-esl_json_object_get_cstr(const cJSON *value, const char *name) {
+    esl_json_object_get_cstr(const cJSON *value, const char *name) {
   if (value == nullptr || name == nullptr) {
     return nullptr;
   }

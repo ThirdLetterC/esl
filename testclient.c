@@ -18,7 +18,8 @@ int main(void) {
     return EXIT_FAILURE;
   }
 
-  if (handle.last_sr_event != nullptr && handle.last_sr_event->body != nullptr) {
+  if (handle.last_sr_event != nullptr &&
+      handle.last_sr_event->body != nullptr) {
     printf("%s\n", handle.last_sr_event->body);
   } else if (*handle.last_sr_reply != '\0') {
     // this is unlikely to happen with api or bgapi (which is hardcoded above)

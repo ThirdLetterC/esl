@@ -80,8 +80,7 @@ cjson_get_array_const(const cJSON *value) {
 }
 
 [[nodiscard]] static inline cJSON *
-cJSON_AddStringToObject(cJSON *object, const char *name,
-                        const char *string) {
+cJSON_AddStringToObject(cJSON *object, const char *name, const char *string) {
   const auto obj = cjson_get_object(object);
   if (obj == nullptr || name == nullptr || string == nullptr ||
       json_object_set_string(obj, name, string) != JSONSuccess) {
@@ -90,8 +89,8 @@ cJSON_AddStringToObject(cJSON *object, const char *name,
   return json_object_get_value(obj, name);
 }
 
-[[nodiscard]] static inline cJSON *
-cJSON_GetObjectItem(const cJSON *object, const char *name) {
+[[nodiscard]] static inline cJSON *cJSON_GetObjectItem(const cJSON *object,
+                                                       const char *name) {
   const auto obj = cjson_get_object_const(object);
   return obj != nullptr && name != nullptr ? json_object_get_value(obj, name)
                                            : nullptr;
@@ -117,8 +116,8 @@ cJSON_AddBoolToObject(cJSON *object, const char *name, bool boolean) {
   return json_object_get_value(obj, name);
 }
 
-[[nodiscard]] static inline cJSON *
-cJSON_AddNullToObject(cJSON *object, const char *name) {
+[[nodiscard]] static inline cJSON *cJSON_AddNullToObject(cJSON *object,
+                                                         const char *name) {
   const auto obj = cjson_get_object(object);
   if (obj == nullptr || name == nullptr ||
       json_object_set_null(obj, name) != JSONSuccess) {
@@ -207,7 +206,7 @@ static inline void cJSON_free(void *ptr) {
 static inline void cJSON_Delete(cJSON *item) { json_value_free(item); }
 
 [[nodiscard]] ESL_DECLARE(const char *)
-esl_json_object_get_cstr(const cJSON *value, const char *name);
+    esl_json_object_get_cstr(const cJSON *value, const char *name);
 
 [[nodiscard]] static inline cJSON *
 esl_json_add_child_obj(cJSON *parent, const char *name, cJSON *value) {
@@ -222,8 +221,8 @@ esl_json_add_child_obj(cJSON *parent, const char *name, cJSON *value) {
   return cjson_add_value_to_object(parent, name, child_value);
 }
 
-[[nodiscard]] static inline cJSON *
-esl_json_add_child_array(cJSON *parent, const char *name) {
+[[nodiscard]] static inline cJSON *esl_json_add_child_array(cJSON *parent,
+                                                            const char *name) {
   esl_assert(parent != nullptr);
   esl_assert(name != nullptr);
 
@@ -236,8 +235,7 @@ esl_json_add_child_array(cJSON *parent, const char *name) {
 }
 
 [[nodiscard]] static inline cJSON *
-esl_json_add_child_string(cJSON *parent, const char *name,
-                          const char *val) {
+esl_json_add_child_string(cJSON *parent, const char *name, const char *val) {
   esl_assert(parent != nullptr);
   esl_assert(name != nullptr);
 
