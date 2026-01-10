@@ -1,10 +1,10 @@
 # ESL Client Library
 
-C/C++ client for the FreeSWITCH Event Socket Library (ESL). It includes the core socket/event handling code under `src/`, public headers in `src/include/`, and a small sample program in `testclient.c` that connects to a running FreeSWITCH instance and prints the output of `api status`.
+Pure C client library for the FreeSWITCH Event Socket Library (ESL). It includes the core socket/event handling code under `src/`, public headers in `src/include/`, and a small sample program in `testclient.c` that connects to a running FreeSWITCH instance and prints the output of `api status`.
 
 ## Requirements
 - FreeSWITCH with the event socket listener enabled (default: `localhost:8021`, password `ClueCon`) to run the sample client.
-- A C++17-capable toolchain. `esl_json.*` uses `[[nodiscard]]`, `auto`, and `nullptr`, so compile the sources as C++.
+- A C23-capable toolchain. The sources use modern C features such as `auto`, `nullptr`, and `[[nodiscard]]`.
 - POSIX: `pthread` is used for threading; Windows builds need Winsock.
 - Parson JSON headers. `src/include/esl_json.h` currently includes `../../../parson/parson.h`, which expects a `parson/` checkout one level above the project root (e.g., `../parson`). Adjust your include paths or the include directive if your layout differs.
 
@@ -12,7 +12,7 @@ C/C++ client for the FreeSWITCH Event Socket Library (ESL). It includes the core
 Compile everything (library + sample) with a single command:
 
 ```bash
-g++ -std=c++17 -I src/include -I ../parson \
+cc -std=c23 -I src/include -I ../parson \
   src/*.c testclient.c -pthread -o testclient
 ```
 
