@@ -87,6 +87,8 @@
 #define ESL_CLAMP(min, max, val) (ESL_MIN(max, ESL_MAX(val, min)))
 #endif
 
+static constexpr esl_size_t ESL_MAX_CONTENT_LENGTH = 16'777'216;
+
 /* Written by Marc Espie, public domain */
 #define ESL_CTYPE_NUM_CHARS 256
 
@@ -1309,13 +1311,19 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event) {
   }
 
   if ((cl = esl_event_get_header(revent, "content-length"))) {
-    char *body;
     esl_ssize_t sofar = 0;
 
     len = atol(cl);
-    body = malloc(len + 1);
-    esl_assert(body);
-    *(body + len) = '\0';
+    if (len < 0 || (esl_size_t)len > ESL_MAX_CONTENT_LENGTH) {
+      esl_event_destroy(&revent);
+      goto fail;
+    }
+
+    auto *body = (char *)calloc((size_t)len + 1, sizeof(char));
+    if (body == nullptr) {
+      esl_event_destroy(&revent);
+      goto fail;
+    }
 
     do {
       esl_ssize_t r, s = esl_buffer_inuse(handle->packet_buf);
@@ -1453,6 +1461,11 @@ parse_event:
   return ESL_SUCCESS;
 
 fail:
+
+  if (revent == handle->last_event) {
+    handle->last_event = NULL;
+  }
+  esl_event_destroy(&revent);
 
   esl_mutex_unlock(handle->mutex);
 

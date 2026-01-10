@@ -207,10 +207,17 @@ ESL_DECLARE(esl_size_t) esl_buffer_packet_count(esl_buffer_t *buffer) {
   for (p = head; p && *p && p < e; p++) {
     if (*p == '\n') {
       pe = p + 1;
-      if (*pe == '\r')
+      if (pe >= e) {
+        break;
+      }
+      if (*pe == '\r') {
         pe++;
-      if (pe <= e && *pe == '\n') {
-        p = pe++;
+        if (pe >= e) {
+          break;
+        }
+      }
+      if (*pe == '\n') {
+        p = pe;
         x++;
       }
     }
@@ -234,10 +241,16 @@ esl_buffer_read_packet(esl_buffer_t *buffer, void *data, esl_size_t maxlen) {
   for (p = head; p && *p && p < e; p++) {
     if (*p == '\n') {
       pe = p + 1;
-      if (*pe == '\r')
+      if (pe >= e) {
+        break;
+      }
+      if (*pe == '\r') {
         pe++;
-      if (pe <= e && *pe == '\n') {
-        pe++;
+        if (pe >= e) {
+          break;
+        }
+      }
+      if (*pe == '\n') {
         datalen = pe - head;
         if (datalen > maxlen) {
           datalen = maxlen;
