@@ -6,7 +6,6 @@ Pure C client library for the FreeSWITCH Event Socket Library (ESL). It includes
 - FreeSWITCH with the event socket listener enabled (default: `localhost:8021`, password `ClueCon`) to run the sample client.
 - A C23-capable toolchain. The sources use modern C features such as `auto`, `nullptr`, and `[[nodiscard]]`.
 - POSIX: `pthread` is used for threading; Windows builds need Winsock.
-- Parson JSON headers. `src/include/esl_json.h` currently includes `../../../parson/parson.h`, which expects a `parson/` checkout one level above the project root (e.g., `../parson`). Adjust your include paths or the include directive if your layout differs.
 
 ## Build quickstart
 Compile everything (library + sample) with a single command:
