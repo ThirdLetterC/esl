@@ -1,0 +1,36 @@
+# ESL Client Library
+
+C/C++ client for the FreeSWITCH Event Socket Library (ESL). It includes the core socket/event handling code under `src/`, public headers in `src/include/`, and a small sample program in `testclient.c` that connects to a running FreeSWITCH instance and prints the output of `api status`.
+
+## Requirements
+- FreeSWITCH with the event socket listener enabled (default: `localhost:8021`, password `ClueCon`) to run the sample client.
+- A C++17-capable toolchain. `esl_json.*` uses `[[nodiscard]]`, `auto`, and `nullptr`, so compile the sources as C++.
+- POSIX: `pthread` is used for threading; Windows builds need Winsock.
+- Parson JSON headers. `src/include/esl_json.h` currently includes `../../../parson/parson.h`, which expects a `parson/` checkout one level above the project root (e.g., `../parson`). Adjust your include paths or the include directive if your layout differs.
+
+## Build quickstart
+Compile everything (library + sample) with a single command:
+
+```bash
+g++ -std=c++17 -I src/include -I ../parson \
+  src/*.c testclient.c -pthread -o testclient
+```
+
+Run the example while FreeSWITCH is up:
+
+```bash
+./testclient
+```
+
+`testclient` connects to `localhost:8021`, sends `api status`, and prints the reply body if present (otherwise the raw reply line).
+
+## API highlights
+- `esl_connect` / `esl_connect_timeout` to open authenticated connections.
+- `esl_send_recv` for synchronous command/response, or `esl_send` + `esl_recv_event[_timed]` for manual polling.
+- `esl_events` and `esl_filter` to subscribe to and scope incoming events.
+- `esl_sendevent` / `esl_sendmsg` to push custom events, and `esl_execute` to trigger applications on a channel UUID.
+- `esl_json_*` helpers wrap Parson for lightweight JSON parsing/serialization when dealing with `JSON` event payloads.
+
+## Notes
+- Public headers live in `src/include/`; keep them on your include path when integrating.
+- The sources are licensed under the BSD-style terms found at the top of each file.
