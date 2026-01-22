@@ -30,9 +30,9 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "esl.h"
 #ifndef ESL_BUFFER_H
 #define ESL_BUFFER_H
+
 /**
  * @defgroup esl_buffer Buffer Routines
  * @ingroup buffer

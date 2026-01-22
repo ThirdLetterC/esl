@@ -52,36 +52,21 @@
 #ifndef ESL_CONFIG_H
 #define ESL_CONFIG_H
 
-#include "esl.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* defined(__cplusplus) */
-
 #define ESL_URL_SEPARATOR "://"
 
-#ifdef WIN32
-#define ESL_PATH_SEPARATOR "\\"
-#ifndef ESL_CONFIG_DIR
-#define ESL_CONFIG_DIR "c:\\openesl"
-#endif
-#define esl_is_file_path(file)                                                 \
-  (*(file + 1) == ':' || *file == '/' || strstr(file, SWITCH_URL_SEPARATOR))
-#else
 #define ESL_PATH_SEPARATOR "/"
 #ifndef ESL_CONFIG_DIR
 #define ESL_CONFIG_DIR "/etc/openesl"
 #endif
 #define esl_is_file_path(file)                                                 \
   ((*file == '/') || strstr(file, SWITCH_URL_SEPARATOR))
-#endif
 
 /*!
   \brief Evaluate the truthfullness of a string expression
   \param expr a string expression
   \return true or false
 */
-static __inline__ int esl_true(const char *expr) {
+static inline bool esl_true(const char *expr) {
   return (expr && (!strcasecmp(expr, "yes") || !strcasecmp(expr, "on") ||
                    !strcasecmp(expr, "true") || !strcasecmp(expr, "enabled") ||
                    !strcasecmp(expr, "active") || !strcasecmp(expr, "allow") ||
@@ -93,7 +78,7 @@ static __inline__ int esl_true(const char *expr) {
   \param expr a string expression
   \return true or false
 */
-static __inline__ int esl_false(const char *expr) {
+static inline bool esl_false(const char *expr) {
   return (expr &&
           (!strcasecmp(expr, "no") || !strcasecmp(expr, "off") ||
            !strcasecmp(expr, "false") || !strcasecmp(expr, "disabled") ||
@@ -158,9 +143,5 @@ ESL_DECLARE(int)
 esl_config_get_cas_bits(char *strvalue, unsigned char *outbits);
 
 /** @} */
-
-#ifdef __cplusplus
-}
-#endif /* defined(__cplusplus) */
 
 #endif /* defined(ESL_CONFIG_H) */

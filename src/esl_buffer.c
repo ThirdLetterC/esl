@@ -87,13 +87,13 @@ esl_buffer_create(esl_buffer_t **buffer, esl_size_t blocksize,
 
 ESL_DECLARE(esl_size_t) esl_buffer_len(esl_buffer_t *buffer) {
 
-  esl_assert(buffer != NULL);
+  esl_assert(buffer != nullptr);
 
   return buffer->datalen;
 }
 
 ESL_DECLARE(esl_size_t) esl_buffer_freespace(esl_buffer_t *buffer) {
-  esl_assert(buffer != NULL);
+  esl_assert(buffer != nullptr);
 
   if (buffer->max_len) {
     return (esl_size_t)(buffer->max_len - buffer->used);
@@ -102,7 +102,7 @@ ESL_DECLARE(esl_size_t) esl_buffer_freespace(esl_buffer_t *buffer) {
 }
 
 ESL_DECLARE(esl_size_t) esl_buffer_inuse(esl_buffer_t *buffer) {
-  esl_assert(buffer != NULL);
+  esl_assert(buffer != nullptr);
 
   return buffer->used;
 }
@@ -111,7 +111,7 @@ ESL_DECLARE(esl_size_t)
 esl_buffer_seek(esl_buffer_t *buffer, esl_size_t datalen) {
   esl_size_t reading = 0;
 
-  esl_assert(buffer != NULL);
+  esl_assert(buffer != nullptr);
 
   if (buffer->used < 1) {
     buffer->used = 0;
@@ -132,7 +132,7 @@ ESL_DECLARE(esl_size_t)
 esl_buffer_toss(esl_buffer_t *buffer, esl_size_t datalen) {
   esl_size_t reading = 0;
 
-  esl_assert(buffer != NULL);
+  esl_assert(buffer != nullptr);
 
   if (buffer->used < 1) {
     buffer->used = 0;
@@ -172,9 +172,9 @@ ESL_DECLARE(esl_size_t)
 esl_buffer_read(esl_buffer_t *buffer, void *data, esl_size_t datalen) {
   esl_size_t reading = 0;
 
-  esl_assert(buffer != NULL);
-  esl_assert(data != NULL);
-  esl_assert(buffer->head != NULL);
+  esl_assert(buffer != nullptr);
+  esl_assert(data != nullptr);
+  esl_assert(buffer->head != nullptr);
 
   if (buffer->used < 1) {
     buffer->used = 0;
@@ -198,7 +198,7 @@ ESL_DECLARE(esl_size_t) esl_buffer_packet_count(esl_buffer_t *buffer) {
   char *pe, *p, *e, *head;
   esl_size_t x = 0;
 
-  esl_assert(buffer != NULL);
+  esl_assert(buffer != nullptr);
 
   head = (char *)buffer->head;
 
@@ -231,8 +231,8 @@ esl_buffer_read_packet(esl_buffer_t *buffer, void *data, esl_size_t maxlen) {
   char *pe, *p, *e, *head;
   esl_size_t datalen = 0;
 
-  esl_assert(buffer != NULL);
-  esl_assert(data != NULL);
+  esl_assert(buffer != nullptr);
+  esl_assert(data != nullptr);
 
   head = (char *)buffer->head;
 
@@ -267,9 +267,9 @@ ESL_DECLARE(esl_size_t)
 esl_buffer_write(esl_buffer_t *buffer, const void *data, esl_size_t datalen) {
   esl_size_t freespace, actual_freespace;
 
-  esl_assert(buffer != NULL);
-  esl_assert(data != NULL);
-  esl_assert(buffer->data != NULL);
+  esl_assert(buffer != nullptr);
+  esl_assert(data != nullptr);
+  esl_assert(buffer->data != nullptr);
 
   if (!datalen) {
     return buffer->used;
@@ -328,8 +328,8 @@ esl_buffer_write(esl_buffer_t *buffer, const void *data, esl_size_t datalen) {
 }
 
 ESL_DECLARE(void) esl_buffer_zero(esl_buffer_t *buffer) {
-  esl_assert(buffer != NULL);
-  esl_assert(buffer->data != NULL);
+  esl_assert(buffer != nullptr);
+  esl_assert(buffer->data != nullptr);
 
   buffer->used = 0;
   buffer->actually_used = 0;
@@ -351,9 +351,9 @@ esl_buffer_zwrite(esl_buffer_t *buffer, const void *data, esl_size_t datalen) {
 ESL_DECLARE(void) esl_buffer_destroy(esl_buffer_t **buffer) {
   if (*buffer) {
     free((*buffer)->data);
-    (*buffer)->data = NULL;
+    (*buffer)->data = nullptr;
     free(*buffer);
   }
 
-  *buffer = NULL;
+  *buffer = nullptr;
 }

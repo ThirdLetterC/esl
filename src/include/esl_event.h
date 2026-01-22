@@ -34,12 +34,6 @@
 #ifndef ESL_EVENT_H
 #define ESL_EVENT_H
 
-#include <esl.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* defined(__cplusplus) */
-
 typedef enum {
   ESL_STACK_BOTTOM,
   ESL_STACK_TOP,
@@ -192,11 +186,11 @@ struct esl_event {
 
 typedef enum { ESL_EF_UNIQ_HEADERS = (1 << 0) } esl_event_flag_t;
 
-#define ESL_EVENT_SUBCLASS_ANY NULL
+#define ESL_EVENT_SUBCLASS_ANY nullptr
 
 /*!
   \brief Create an event
-  \param event a NULL pointer on which to create the event
+  \param event a nullptr pointer on which to create the event
   \param event_id the event id enumeration of the desired event
   \param subclass_name the subclass name for custom event (only valid when
   event_id is ESL_EVENT_CUSTOM)
@@ -231,7 +225,7 @@ esl_event_get_header_idx(esl_event_t *event, const char *header_name, int idx);
 /*!
   \brief Retrieve the body value from an event
   \param event the event to read the body from
-  \return the value of the body or NULL
+  \return the value of the body or nullptr
 */
 ESL_DECLARE(char *) esl_event_get_body(esl_event_t *event);
 
@@ -266,7 +260,7 @@ esl_event_add_header_string(esl_event_t *event, esl_stack_t stack,
 ESL_DECLARE(esl_status_t)
 esl_event_del_header_val(esl_event_t *event, const char *header_name,
                          const char *var);
-#define esl_event_del_header(_e, _h) esl_event_del_header_val(_e, _h, NULL)
+#define esl_event_del_header(_e, _h) esl_event_del_header_val(_e, _h, nullptr)
 
 /*!
   \brief Destroy an event
@@ -279,7 +273,7 @@ ESL_DECLARE(void) esl_event_destroy(esl_event_t **event);
 
 /*!
   \brief Duplicate an event
-  \param event a NULL pointer on which to duplicate the event
+  \param event a nullptr pointer on which to duplicate the event
   \param todup an event to duplicate
   \return ESL_SUCCESS if the event was duplicated
 */
@@ -313,7 +307,7 @@ esl_name_event(const char *name, esl_event_types_t *type);
   \note you must free the resulting string when you are finished with it
 */
 ESL_DECLARE(esl_status_t)
-esl_event_serialize(esl_event_t *event, char **str, esl_bool_t encode);
+esl_event_serialize(esl_event_t *event, char **str, bool encode);
 ESL_DECLARE(esl_status_t)
 esl_event_serialize_json(esl_event_t *event, char **str);
 ESL_DECLARE(esl_status_t)
@@ -334,7 +328,7 @@ esl_event_set_body(esl_event_t *event, const char *body);
 /*!
   \brief Create a new event assuming it will not be custom event and therefore
   hiding the unused parameters
-  \param event a NULL pointer on which to create the event
+  \param event a nullptr pointer on which to create the event
   \param id the event id enumeration of the desired event
   \return ESL_SUCCESS on success
 */
@@ -344,9 +338,5 @@ esl_event_set_body(esl_event_t *event, const char *body);
 ESL_DECLARE(const char *) esl_priority_name(esl_priority_t priority);
 
 ///\}
-
-#ifdef __cplusplus
-}
-#endif /* defined(__cplusplus) */
 
 #endif /* defined(ESL_EVENT_H) */

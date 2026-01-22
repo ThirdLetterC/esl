@@ -173,7 +173,7 @@ esl_name_event(const char *name, esl_event_types_t *type) {
 ESL_DECLARE(esl_status_t)
 esl_event_create_subclass(esl_event_t **event, esl_event_types_t event_id,
                           const char *subclass_name) {
-  *event = NULL;
+  *event = nullptr;
 
   if ((event_id != ESL_EVENT_CLONE && event_id != ESL_EVENT_CUSTOM) &&
       subclass_name) {
@@ -255,7 +255,7 @@ esl_event_get_header_ptr(esl_event_t *event, const char *header_name) {
   esl_assert(event);
 
   if (!header_name)
-    return NULL;
+    return nullptr;
 
   hash = esl_ci_hashfunc_default(header_name, &hlen);
 
@@ -264,7 +264,7 @@ esl_event_get_header_ptr(esl_event_t *event, const char *header_name) {
       return hp;
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 ESL_DECLARE(char *)
@@ -276,7 +276,7 @@ esl_event_get_header_idx(esl_event_t *event, const char *header_name, int idx) {
       if (idx < hp->idx) {
         return hp->array[idx];
       } else {
-        return NULL;
+        return nullptr;
       }
     }
 
@@ -285,17 +285,17 @@ esl_event_get_header_idx(esl_event_t *event, const char *header_name, int idx) {
     return event->body;
   }
 
-  return NULL;
+  return nullptr;
 }
 
 ESL_DECLARE(char *) esl_event_get_body(esl_event_t *event) {
-  return (event ? event->body : NULL);
+  return (event ? event->body : nullptr);
 }
 
 ESL_DECLARE(esl_status_t)
 esl_event_del_header_val(esl_event_t *event, const char *header_name,
                          const char *val) {
-  esl_event_header_t *hp, *lp = NULL, *tp;
+  esl_event_header_t *hp, *lp = nullptr, *tp;
   esl_status_t status = (esl_status_t)ESL_FALSE;
   int x = 0;
   esl_ssize_t hlen = -1;
@@ -425,12 +425,12 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
                                               esl_stack_t stack,
                                               const char *header_name,
                                               char *data) {
-  esl_event_header_t *header = NULL;
+  esl_event_header_t *header = nullptr;
   esl_ssize_t hlen = -1;
   int exists = 0, fly = 0;
   char *index_ptr;
   int index = 0;
-  char *real_header_name = NULL;
+  char *real_header_name = nullptr;
 
   if (!strcmp(header_name, "_body")) {
     esl_event_set_body(event, data);
@@ -447,7 +447,7 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
   }
 
   if (index_ptr || (stack & ESL_STACK_PUSH) || (stack & ESL_STACK_UNSHIFT)) {
-    esl_event_header_t *tmp_header = NULL;
+    esl_event_header_t *tmp_header = nullptr;
 
     if (!(header = esl_event_get_header_ptr(event, header_name)) && index_ptr) {
 
@@ -497,7 +497,7 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
           exists++;
           stack &= ~(ESL_STACK_TOP | ESL_STACK_BOTTOM);
         } else {
-          header = NULL;
+          header = nullptr;
         }
       }
     }
@@ -524,13 +524,8 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
     header = new_header(header_name);
   }
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 6385 6386)
-#endif
-
   if ((stack & ESL_STACK_PUSH) || (stack & ESL_STACK_UNSHIFT)) {
-    char **m = NULL;
+    char **m = nullptr;
     esl_size_t len = 0;
     char *hv;
     int i = 0, j = 0;
@@ -539,7 +534,7 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
       m = malloc(sizeof(char *));
       esl_assert(m);
       m[0] = header->value;
-      header->value = NULL;
+      header->value = nullptr;
       header->array = m;
       header->idx++;
     }
@@ -566,10 +561,6 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
       esl_assert(header->array[j]);
       len += strlen(header->array[j]) + 2;
     }
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
     if (len) {
       len += 8;
@@ -608,7 +599,7 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
         event->last_header->next = header;
       } else {
         event->headers = header;
-        header->next = NULL;
+        header->next = nullptr;
       }
       event->last_header = header;
     }
@@ -702,7 +693,7 @@ ESL_DECLARE(void) esl_event_destroy(esl_event_t **event) {
     FREE(ep);
 #endif
   }
-  *event = NULL;
+  *event = nullptr;
 }
 
 ESL_DECLARE(void) esl_event_merge(esl_event_t *event, esl_event_t *tomerge) {
@@ -764,16 +755,16 @@ esl_event_dup(esl_event_t **event, esl_event_t *todup) {
 }
 
 ESL_DECLARE(esl_status_t)
-esl_event_serialize(esl_event_t *event, char **str, esl_bool_t encode) {
+esl_event_serialize(esl_event_t *event, char **str, bool encode) {
   esl_size_t len = 0;
   esl_event_header_t *hp;
   esl_size_t llen = 0, dlen = 0, blocksize = 512, encode_len = 1536,
              new_len = 0;
   char *buf;
-  char *encode_buf = NULL; /* used for url encoding of variables to make sure
+  char *encode_buf = nullptr; /* used for url encoding of variables to make sure
                               unsafe things stay out of the serialized copy */
 
-  *str = NULL;
+  *str = nullptr;
 
   dlen = blocksize * 2;
 
@@ -962,7 +953,7 @@ esl_event_serialize_json(esl_event_t *event, char **str) {
   esl_event_header_t *hp;
   cJSON *cj;
 
-  *str = NULL;
+  *str = nullptr;
 
   cj = cJSON_CreateObject();
 

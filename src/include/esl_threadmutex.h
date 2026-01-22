@@ -22,12 +22,6 @@
 #ifndef _ESL_THREADMUTEX_H
 #define _ESL_THREADMUTEX_H
 
-#include "esl.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* defined(__cplusplus) */
-
 typedef struct esl_mutex esl_mutex_t;
 typedef struct esl_thread esl_thread_t;
 typedef void *(*esl_thread_function_t)(esl_thread_t *, void *);
@@ -42,9 +36,5 @@ ESL_DECLARE(esl_status_t) esl_mutex_destroy(esl_mutex_t **mutex);
 ESL_DECLARE(esl_status_t) esl_mutex_lock(esl_mutex_t *mutex);
 ESL_DECLARE(esl_status_t) esl_mutex_trylock(esl_mutex_t *mutex);
 ESL_DECLARE(esl_status_t) esl_mutex_unlock(esl_mutex_t *mutex);
-
-#ifdef __cplusplus
-}
-#endif /* defined(__cplusplus) */
 
 #endif /* defined(_ESL_THREADMUTEX_H) */

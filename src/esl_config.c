@@ -37,7 +37,7 @@
 ESL_DECLARE(int)
 esl_config_open_file(esl_config_t *cfg, const char *file_path) {
   FILE *f;
-  const char *path = NULL;
+  const char *path = nullptr;
   char path_buf[1024];
 
   if (file_path[0] == '/') {
@@ -107,7 +107,7 @@ esl_config_next_pair(esl_config_t *cfg, char **var, char **val) {
   int ret = 0;
   char *p, *end;
 
-  *var = *val = NULL;
+  *var = *val = nullptr;
 
   if (!cfg || !cfg->file) {
     return 0;

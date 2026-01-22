@@ -36,10 +36,6 @@
 
 #include <stdarg.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* defined(__cplusplus) */
-
 #define esl_copy_string(_x, _y, _z) snprintf(_x, _z, "%s", _y)
 #define esl_set_string(_x, _y) esl_copy_string(_x, _y, sizeof(_x))
 #define ESL_VA_NONE "%s", ""
@@ -60,26 +56,6 @@ typedef enum {
   ESL_EVENT_TYPE_JSON
 } esl_event_type_t;
 
-#ifdef WIN32
-#define ESL_SEQ_FWHITE                                                         \
-  FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY
-#define ESL_SEQ_BWHITE FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE
-#define ESL_SEQ_FRED FOREGROUND_RED | FOREGROUND_INTENSITY
-#define ESL_SEQ_BRED FOREGROUND_RED
-#define ESL_SEQ_FMAGEN FOREGROUND_BLUE | FOREGROUND_RED | FOREGROUND_INTENSITY
-#define ESL_SEQ_BMAGEN FOREGROUND_BLUE | FOREGROUND_RED
-#define ESL_SEQ_FCYAN FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY
-#define ESL_SEQ_BCYAN FOREGROUND_GREEN | FOREGROUND_BLUE
-#define ESL_SEQ_FGREEN FOREGROUND_GREEN | FOREGROUND_INTENSITY
-#define ESL_SEQ_BGREEN FOREGROUND_GREEN
-#define ESL_SEQ_FYELLOW FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY
-#define ESL_SEQ_BYELLOW FOREGROUND_RED | FOREGROUND_GREEN
-#define ESL_SEQ_DEFAULT_COLOR ESL_SEQ_FWHITE
-#define ESL_SEQ_FBLUE FOREGROUND_BLUE | FOREGROUND_INTENSITY
-#define ESL_SEQ_BBLUE FOREGROUND_BLUE
-#define ESL_SEQ_FBLACK 0 | FOREGROUND_INTENSITY
-#define ESL_SEQ_BBLACK 0
-#else
 #define ESL_SEQ_ESC "\033["
 /* Ansi Control character suffixes */
 #define ESL_SEQ_HOME_CHAR 'H'
@@ -134,136 +110,38 @@ typedef enum {
 #define ESL_SEQ_CLEARLINE ESL_SEQ_ESC ESL_SEQ_CLEARLINE_CHAR_STR
 #define ESL_SEQ_CLEARLINEEND ESL_SEQ_ESC ESL_SEQ_CLEARLINEEND_CHAR
 #define ESL_SEQ_CLEARSCR ESL_SEQ_ESC ESL_SEQ_CLEARSCR_CHAR ESL_SEQ_HOME
-#endif
-
-#if !defined(_XOPEN_SOURCE) && !defined(__FreeBSD__) &&                        \
-    !defined(__NetBSD__) && !defined(__OpenBSD__)
-#define _XOPEN_SOURCE 600
-#endif
-
-#ifndef HAVE_STRINGS_H
-#define HAVE_STRINGS_H 1
-#endif
-#ifndef HAVE_SYS_SOCKET_H
-#define HAVE_SYS_SOCKET_H 1
-#endif
-
-#ifndef __WINDOWS__
-#if defined(WIN32) || defined(WIN64) || defined(_MSC_VER) || defined(_WIN32)
-#define __WINDOWS__
-#endif
-#endif
-
-#ifdef _MSC_VER
-#ifndef __inline__
-#define __inline__ __inline
-#endif
-#if (_MSC_VER >= 1400) /* VC8+ */
-#ifndef _CRT_SECURE_NO_DEPRECATE
-#define _CRT_SECURE_NO_DEPRECATE
-#endif
-#ifndef _CRT_NONSTDC_NO_DEPRECATE
-#define _CRT_NONSTDC_NO_DEPRECATE
-#endif
-#endif
-#ifndef strcasecmp
-#define strcasecmp(s1, s2) _stricmp(s1, s2)
-#endif
-#ifndef strncasecmp
-#define strncasecmp(s1, s2, n) _strnicmp(s1, s2, n)
-#endif
-#if _MSC_VER < 1900
-#define snprintf _snprintf
-#endif
-#ifndef S_IRUSR
-#define S_IRUSR _S_IREAD
-#endif
-#ifndef S_IWUSR
-#define S_IWUSR _S_IWRITE
-#endif
-#undef HAVE_STRINGS_H
-#undef HAVE_SYS_SOCKET_H
-#endif
 
 #include <time.h>
-#ifndef WIN32
 #include <sys/time.h>
-#endif
 
 #include <stdarg.h>
+#include <assert.h>
+#include <ctype.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifndef WIN32
-#include <ctype.h>
-#include <netinet/tcp.h>
-#include <signal.h>
+#include <strings.h>
 #include <sys/select.h>
 #include <sys/types.h>
 #include <unistd.h>
-#endif
 
-#ifdef HAVE_STRINGS_H
-#include <strings.h>
-#endif
-#include <assert.h>
-
-#if (_MSC_VER >= 1400) // VC8+
-#define esl_assert(expr)                                                       \
-  assert(expr);                                                                \
-  __analysis_assume(expr)
-#endif
-
-#ifndef esl_assert
 #define esl_assert(_x) assert(_x)
-#endif
 
 #define esl_safe_free(_x)                                                      \
   if (_x)                                                                      \
     free(_x);                                                                  \
-  _x = NULL
-#define esl_strlen_zero(s) (!s || *(s) == '\0')
+  _x = nullptr
+#define esl_strlen_zero(s) (!(s) || *(s) == '\0')
 #define esl_strlen_zero_buf(s) (*(s) == '\0')
-#define end_of(_s) *(*_s == '\0' ? _s : _s + strlen(_s) - 1)
+#define end_of(_s) *(*(_s) == '\0' ? (_s) : (_s) + strlen(_s) - 1)
 
-#ifdef WIN32
-#include <windows.h>
-#include <winsock2.h>
-typedef SOCKET esl_socket_t;
-#if !defined(_STDINT) && !defined(uint32_t)
-typedef unsigned __int64 uint64_t;
-typedef unsigned __int32 uint32_t;
-typedef unsigned __int16 uint16_t;
-typedef unsigned __int8 uint8_t;
-typedef __int64 int64_t;
-typedef __int32 int32_t;
-typedef __int16 int16_t;
-typedef __int8 int8_t;
-#endif
-typedef intptr_t esl_ssize_t;
-typedef int esl_filehandle_t;
-#define ESL_SOCK_INVALID INVALID_SOCKET
-#define strerror_r(num, buf, size) strerror_s(buf, size, num)
-#if defined(ESL_DECLARE_STATIC)
-#define ESL_DECLARE(type) type __stdcall
-#define ESL_DECLARE_NONSTD(type) type __cdecl
-#define ESL_DECLARE_DATA
-#elif defined(ESL_EXPORTS)
-#define ESL_DECLARE(type) __declspec(dllexport) type __stdcall
-#define ESL_DECLARE_NONSTD(type) __declspec(dllexport) type __cdecl
-#define ESL_DECLARE_DATA __declspec(dllexport)
-#else
-#define ESL_DECLARE(type) __declspec(dllimport) type __stdcall
-#define ESL_DECLARE_NONSTD(type) __declspec(dllimport) type __cdecl
-#define ESL_DECLARE_DATA __declspec(dllimport)
-#endif
-#else
 #define ESL_DECLARE(type) type
 #define ESL_DECLARE_NONSTD(type) type
 #define ESL_DECLARE_DATA
-#include <netdb.h>
-#include <netinet/in.h>
-#include <stdarg.h>
 #include <stdint.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -272,7 +150,6 @@ typedef int esl_filehandle_t;
 typedef int esl_socket_t;
 typedef ssize_t esl_ssize_t;
 typedef int esl_filehandle_t;
-#endif
 
 #include "esl_json.h"
 #include "math.h"
@@ -291,8 +168,8 @@ typedef enum {
 #define BUF_CHUNK 65536 * 50
 #define BUF_START 65536 * 100
 
-#include <esl_buffer.h>
-#include <esl_threadmutex.h>
+#include "esl_buffer.h"
+#include "esl_threadmutex.h"
 
 /*! \brief A handle that will hold the socket information and
            different events received. */
@@ -313,7 +190,7 @@ typedef struct {
   char last_reply[1024];
   /*! Last command reply when called with esl_send_recv */
   char last_sr_reply[1024];
-  /*! Last event received. Only populated when **save_event is NULL */
+  /*! Last event received. Only populated when **save_event is nullptr */
   esl_event_t *last_event;
   /*! Last event received when called by esl_send_recv */
   esl_event_t *last_sr_event;
@@ -338,8 +215,8 @@ typedef struct {
 #define esl_set_flag(obj, flag) (obj)->flags |= (flag)
 #define esl_clear_flag(obj, flag) (obj)->flags &= ~(flag)
 
-/*! \brief Used internally for truth test */
-typedef enum { ESL_TRUE = 1, ESL_FALSE = 0 } esl_bool_t;
+constexpr bool ESL_TRUE = true;
+constexpr bool ESL_FALSE = false;
 
 #ifndef __FUNCTION__
 #define __FUNCTION__ (const char *)__func__
@@ -475,7 +352,7 @@ ESL_DECLARE(esl_status_t) esl_send(esl_handle_t *handle, const char *cmd);
     \param handle Handle to poll
     \param check_q If set to 1, will check the handle queue (handle->race_event)
    and return the last event from it
-    \param[out] save_event If this is not NULL, will return the event received
+    \param[out] save_event If this is not nullptr, will return the event received
 */
 ESL_DECLARE(esl_status_t)
 esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event);
@@ -486,7 +363,7 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event);
     \param ms Maximum time to poll
     \param check_q If set to 1, will check the handle queue (handle->race_event)
    and return the last event from it
-    \param[out] save_event If this is not NULL, will return the event received
+    \param[out] save_event If this is not nullptr, will return the event received
 */
 ESL_DECLARE(esl_status_t)
 esl_recv_event_timed(esl_handle_t *handle, uint32_t ms, int check_q,
@@ -524,19 +401,15 @@ ESL_DECLARE(unsigned int)
 esl_separate_string_string(char *buf, const char *delim, char **array,
                            unsigned int arraylen);
 
-#define esl_recv(_h) esl_recv_event(_h, 0, NULL)
-#define esl_recv_timed(_h, _ms) esl_recv_event_timed(_h, _ms, 0, NULL)
+#define esl_recv(_h) esl_recv_event(_h, 0, nullptr)
+#define esl_recv_timed(_h, _ms) esl_recv_event_timed(_h, _ms, 0, nullptr)
 
-static __inline__ int esl_safe_strcasecmp(const char *s1, const char *s2) {
+static inline int esl_safe_strcasecmp(const char *s1, const char *s2) {
   if (!(s1 && s2)) {
     return 1;
   }
 
   return strcasecmp(s1, s2);
 }
-
-#ifdef __cplusplus
-}
-#endif /* defined(__cplusplus) */
 
 #endif /* defined(_ESL_H_) */
