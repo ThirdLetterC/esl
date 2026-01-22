@@ -24,6 +24,18 @@
 
 #include "parson.h"
 
+#include <assert.h>
+
+#ifndef esl_assert
+#define esl_assert(_x) assert(_x)
+#endif
+
+#ifndef ESL_DECLARE
+#define ESL_DECLARE(type) type
+#define ESL_DECLARE_NONSTD(type) type
+#define ESL_DECLARE_DATA
+#endif
+
 typedef JSON_Value cJSON;
 
 [[nodiscard]] static inline bool cjson_is_type(const cJSON *value,

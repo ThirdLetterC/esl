@@ -26,15 +26,12 @@
 #ifndef parson_parson_h
 #define parson_parson_h
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-#if 0
-} /* unconfuse xcode */
-#endif
-
 #include <stddef.h> /* size_t */
 #include <stdint.h>
+
+#if !defined(__cplusplus) && !defined(constexpr)
+#define constexpr static const
+#endif
 
 constexpr int PARSON_VERSION_MAJOR = 1;
 constexpr int PARSON_VERSION_MINOR = 5;
@@ -331,9 +328,5 @@ size_t json_string_len(
     const JSON_Value *value); /* doesn't account for last null character */
 double json_number(const JSON_Value *value);
 JSON_Boolean json_boolean(const JSON_Value *value);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

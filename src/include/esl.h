@@ -31,6 +31,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #ifndef _ESL_H_
 #define _ESL_H_
 
@@ -111,16 +115,15 @@ typedef enum {
 #define ESL_SEQ_CLEARLINEEND ESL_SEQ_ESC ESL_SEQ_CLEARLINEEND_CHAR
 #define ESL_SEQ_CLEARSCR ESL_SEQ_ESC ESL_SEQ_CLEARSCR_CHAR ESL_SEQ_HOME
 
-#include <time.h>
 #include <sys/time.h>
+#include <time.h>
 
-#include <stdarg.h>
 #include <assert.h>
 #include <ctype.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <signal.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -215,8 +218,13 @@ typedef struct {
 #define esl_set_flag(obj, flag) (obj)->flags |= (flag)
 #define esl_clear_flag(obj, flag) (obj)->flags &= ~(flag)
 
+#if defined(__cplusplus)
 constexpr bool ESL_TRUE = true;
 constexpr bool ESL_FALSE = false;
+#else
+static const bool ESL_TRUE = true;
+static const bool ESL_FALSE = false;
+#endif
 
 #ifndef __FUNCTION__
 #define __FUNCTION__ (const char *)__func__
@@ -352,7 +360,8 @@ ESL_DECLARE(esl_status_t) esl_send(esl_handle_t *handle, const char *cmd);
     \param handle Handle to poll
     \param check_q If set to 1, will check the handle queue (handle->race_event)
    and return the last event from it
-    \param[out] save_event If this is not nullptr, will return the event received
+    \param[out] save_event If this is not nullptr, will return the event
+   received
 */
 ESL_DECLARE(esl_status_t)
 esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event);
@@ -363,7 +372,8 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event);
     \param ms Maximum time to poll
     \param check_q If set to 1, will check the handle queue (handle->race_event)
    and return the last event from it
-    \param[out] save_event If this is not nullptr, will return the event received
+    \param[out] save_event If this is not nullptr, will return the event
+   received
 */
 ESL_DECLARE(esl_status_t)
 esl_recv_event_timed(esl_handle_t *handle, uint32_t ms, int check_q,

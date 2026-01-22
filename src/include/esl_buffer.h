@@ -43,6 +43,8 @@
 struct esl_buffer;
 typedef struct esl_buffer esl_buffer_t;
 
+#include "esl.h"
+
 /*! \brief Allocate a new dynamic esl_buffer
  * \param buffer returned pointer to the new buffer
  * \param blocksize length to realloc by as data is added

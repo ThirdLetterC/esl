@@ -52,6 +52,16 @@
 #ifndef ESL_CONFIG_H
 #define ESL_CONFIG_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+
+#ifndef ESL_DECLARE
+#define ESL_DECLARE(type) type
+#define ESL_DECLARE_NONSTD(type) type
+#define ESL_DECLARE_DATA
+#endif
+
 #define ESL_URL_SEPARATOR "://"
 
 #define ESL_PATH_SEPARATOR "/"
@@ -66,11 +76,12 @@
   \param expr a string expression
   \return true or false
 */
-static inline bool esl_true(const char *expr) {
-  return (expr && (!strcasecmp(expr, "yes") || !strcasecmp(expr, "on") ||
-                   !strcasecmp(expr, "true") || !strcasecmp(expr, "enabled") ||
-                   !strcasecmp(expr, "active") || !strcasecmp(expr, "allow") ||
-                   atoi(expr)));
+[[maybe_unused]] static inline bool esl_true(const char *expr) {
+  return (expr != nullptr) &&
+         (!strcasecmp(expr, "yes") || !strcasecmp(expr, "on") ||
+          !strcasecmp(expr, "true") || !strcasecmp(expr, "enabled") ||
+          !strcasecmp(expr, "active") || !strcasecmp(expr, "allow") ||
+          atoi(expr));
 }
 
 /*!
@@ -78,12 +89,12 @@ static inline bool esl_true(const char *expr) {
   \param expr a string expression
   \return true or false
 */
-static inline bool esl_false(const char *expr) {
-  return (expr &&
-          (!strcasecmp(expr, "no") || !strcasecmp(expr, "off") ||
-           !strcasecmp(expr, "false") || !strcasecmp(expr, "disabled") ||
-           !strcasecmp(expr, "inactive") || !strcasecmp(expr, "disallow") ||
-           !atoi(expr)));
+[[maybe_unused]] static inline bool esl_false(const char *expr) {
+  return (expr != nullptr) &&
+         (!strcasecmp(expr, "no") || !strcasecmp(expr, "off") ||
+          !strcasecmp(expr, "false") || !strcasecmp(expr, "disabled") ||
+          !strcasecmp(expr, "inactive") || !strcasecmp(expr, "disallow") ||
+          !atoi(expr));
 }
 
 typedef struct esl_config esl_config_t;

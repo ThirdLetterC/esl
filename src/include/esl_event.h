@@ -34,6 +34,8 @@
 #ifndef ESL_EVENT_H
 #define ESL_EVENT_H
 
+#include "esl.h"
+
 typedef enum {
   ESL_STACK_BOTTOM,
   ESL_STACK_TOP,
@@ -187,6 +189,8 @@ struct esl_event {
 typedef enum { ESL_EF_UNIQ_HEADERS = (1 << 0) } esl_event_flag_t;
 
 #define ESL_EVENT_SUBCLASS_ANY nullptr
+
+#include "esl.h"
 
 /*!
   \brief Create an event

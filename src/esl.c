@@ -50,7 +50,7 @@
 #define ESL_CLAMP(min, max, val) (ESL_MIN(max, ESL_MAX(val, min)))
 #endif
 
-static constexpr esl_size_t ESL_MAX_CONTENT_LENGTH = 16'777'216;
+constexpr esl_size_t ESL_MAX_CONTENT_LENGTH = 16'777'216;
 
 /* Written by Marc Espie, public domain */
 #define ESL_CTYPE_NUM_CHARS 256
