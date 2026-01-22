@@ -38,6 +38,8 @@
 #ifndef _ESL_H_
 #define _ESL_H_
 
+#include "esl_base.h"
+
 #include <stdarg.h>
 
 #define esl_copy_string(_x, _y, _z) snprintf(_x, _z, "%s", _y)
@@ -142,37 +144,17 @@ typedef enum {
 #define esl_strlen_zero_buf(s) (*(s) == '\0')
 #define end_of(_s) *(*(_s) == '\0' ? (_s) : (_s) + strlen(_s) - 1)
 
-#define ESL_DECLARE(type) type
-#define ESL_DECLARE_NONSTD(type) type
-#define ESL_DECLARE_DATA
 #include <stdint.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #define ESL_SOCK_INVALID -1
-typedef int esl_socket_t;
-typedef ssize_t esl_ssize_t;
-typedef int esl_filehandle_t;
 
+#include "esl_buffer.h"
 #include "esl_json.h"
-#include "math.h"
-
-typedef int16_t esl_port_t;
-typedef size_t esl_size_t;
-
-typedef enum {
-  ESL_SUCCESS,
-  ESL_FAIL,
-  ESL_BREAK,
-  ESL_DISCONNECTED,
-  ESL_GENERR
-} esl_status_t;
 
 #define BUF_CHUNK 65536 * 50
 #define BUF_START 65536 * 100
-
-#include "esl_buffer.h"
-#include "esl_threadmutex.h"
 
 /*! \brief A handle that will hold the socket information and
            different events received. */
@@ -218,14 +200,6 @@ typedef struct {
 #define esl_set_flag(obj, flag) (obj)->flags |= (flag)
 #define esl_clear_flag(obj, flag) (obj)->flags &= ~(flag)
 
-#if defined(__cplusplus)
-constexpr bool ESL_TRUE = true;
-constexpr bool ESL_FALSE = false;
-#else
-static const bool ESL_TRUE = true;
-static const bool ESL_FALSE = false;
-#endif
-
 #ifndef __FUNCTION__
 #define __FUNCTION__ (const char *)__func__
 #endif
@@ -259,10 +233,6 @@ ESL_DECLARE_DATA extern esl_logger_t esl_log;
 ESL_DECLARE(void) esl_global_set_logger(esl_logger_t logger);
 /*! Sets the default log level for libesl */
 ESL_DECLARE(void) esl_global_set_default_logger(int level);
-
-#include "esl_config.h"
-#include "esl_event.h"
-#include "esl_threadmutex.h"
 
 ESL_DECLARE(size_t) esl_url_encode(const char *url, char *buf, size_t len);
 ESL_DECLARE(char *) esl_url_decode(char *s);
@@ -414,12 +384,6 @@ esl_separate_string_string(char *buf, const char *delim, char **array,
 #define esl_recv(_h) esl_recv_event(_h, 0, nullptr)
 #define esl_recv_timed(_h, _ms) esl_recv_event_timed(_h, _ms, 0, nullptr)
 
-static inline int esl_safe_strcasecmp(const char *s1, const char *s2) {
-  if (!(s1 && s2)) {
-    return 1;
-  }
-
-  return strcasecmp(s1, s2);
-}
+static int esl_safe_strcasecmp(const char *s1, const char *s2);
 
 #endif /* defined(_ESL_H_) */

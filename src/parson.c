@@ -22,17 +22,8 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
 */
-#ifdef _MSC_VER
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
-#endif /* _CRT_SECURE_NO_WARNINGS */
-#endif /* _MSC_VER */
 
 #include "parson.h"
-
-static constexpr int PARSON_IMPL_VERSION_MAJOR = 1;
-static constexpr int PARSON_IMPL_VERSION_MINOR = 5;
-static constexpr int PARSON_IMPL_VERSION_PATCH = 3;
 
 #include <ctype.h>
 #include <errno.h>
@@ -41,13 +32,6 @@ static constexpr int PARSON_IMPL_VERSION_PATCH = 3;
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-static_assert(PARSON_VERSION_MAJOR == PARSON_IMPL_VERSION_MAJOR,
-              "parson version mismatch between parson.c and parson.h");
-static_assert(PARSON_VERSION_MINOR == PARSON_IMPL_VERSION_MINOR,
-              "parson version mismatch between parson.c and parson.h");
-static_assert(PARSON_VERSION_PATCH == PARSON_IMPL_VERSION_PATCH,
-              "parson version mismatch between parson.c and parson.h");
 
 /* Apparently sscanf is not implemented in some "standard" libraries, so don't
  * use it, if you don't have to. */

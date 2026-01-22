@@ -32,6 +32,7 @@
  */
 
 #include "esl_buffer.h"
+#include "esl.h"
 
 static unsigned buffer_id = 0;
 

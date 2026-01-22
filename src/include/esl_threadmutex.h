@@ -22,11 +22,11 @@
 #ifndef _ESL_THREADMUTEX_H
 #define _ESL_THREADMUTEX_H
 
+#include "esl_base.h"
+
 typedef struct esl_mutex esl_mutex_t;
 typedef struct esl_thread esl_thread_t;
 typedef void *(*esl_thread_function_t)(esl_thread_t *, void *);
-
-#include "esl.h"
 
 ESL_DECLARE(esl_status_t)
 esl_thread_create_detached(esl_thread_function_t func, void *data);

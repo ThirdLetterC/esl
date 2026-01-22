@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "esl.h"
+#include "esl_event.h" // required to inspect esl_event_t fields
 
 int main(void) {
   esl_handle_t handle = {0};

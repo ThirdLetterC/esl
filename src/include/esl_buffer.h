@@ -43,7 +43,7 @@
 struct esl_buffer;
 typedef struct esl_buffer esl_buffer_t;
 
-#include "esl.h"
+#include "esl_base.h"
 
 /*! \brief Allocate a new dynamic esl_buffer
  * \param buffer returned pointer to the new buffer

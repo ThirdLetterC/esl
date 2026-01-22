@@ -31,9 +31,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <esl.h>
+#include "esl.h"
+#include "esl_event.h"
+#include "esl_threadmutex.h"
+
 #include <errno.h>
 #include <fcntl.h>
+#include <netdb.h>
 #include <poll.h>
 
 #define closesocket(x)                                                         \
@@ -380,7 +384,7 @@ esl_sendevent(esl_handle_t *handle, esl_event_t *event) {
     return ESL_FAIL;
   }
 
-  esl_event_serialize(event, &txt, ESL_FALSE);
+  esl_event_serialize(event, &txt, false);
 
   esl_log(ESL_LOG_DEBUG, "SEND EVENT\n%s\n", txt);
 
@@ -449,7 +453,7 @@ esl_sendmsg(esl_handle_t *handle, esl_event_t *event, const char *uuid) {
     return ESL_FAIL;
   }
 
-  esl_event_serialize(event, &txt, ESL_FALSE);
+  esl_event_serialize(event, &txt, false);
   len = strlen(txt) + 100;
   cmd_buf = malloc(len);
   assert(cmd_buf);
@@ -523,7 +527,7 @@ struct thread_handler {
   void *user_data;
 };
 
-static void *client_thread(esl_thread_t *me, void *obj) {
+static void *client_thread([[maybe_unused]] esl_thread_t *me, void *obj) {
   struct thread_handler *handler = (struct thread_handler *)obj;
 
   handler->callback(handler->server_sock, handler->client_sock, &handler->addr,
@@ -545,8 +549,9 @@ static int prepare_sock(esl_socket_t sock) {
 }
 
 ESL_DECLARE(esl_status_t)
-esl_listen(const char *host, esl_port_t port, esl_listen_callback_t callback,
-           void *user_data, esl_socket_t *server_sockP) {
+esl_listen([[maybe_unused]] const char *host, esl_port_t port,
+           esl_listen_callback_t callback, void *user_data,
+           esl_socket_t *server_sockP) {
   esl_socket_t server_sock = ESL_SOCK_INVALID;
   struct sockaddr_in addr;
   esl_status_t status = ESL_SUCCESS;
@@ -604,7 +609,7 @@ end:
 }
 
 ESL_DECLARE(esl_status_t)
-esl_listen_threaded(const char *host, esl_port_t port,
+esl_listen_threaded([[maybe_unused]] const char *host, esl_port_t port,
                     esl_listen_callback_t callback, void *user_data, int max) {
   esl_socket_t server_sock = ESL_SOCK_INVALID;
   struct sockaddr_in addr;
@@ -1065,7 +1070,9 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event) {
     }
 
     *((char *)handle->socket_buf +
-      ESL_CLAMP(0, sizeof(handle->socket_buf) - 1, rrval)) = '\0';
+      (size_t)ESL_CLAMP((esl_ssize_t)0,
+                        (esl_ssize_t)(sizeof(handle->socket_buf) - 1), rrval)) =
+        '\0';
 
     esl_buffer_write(handle->packet_buf, handle->socket_buf, rrval);
   }
@@ -1108,7 +1115,9 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event) {
         }
 
         *((char *)handle->socket_buf +
-          ESL_CLAMP(0, sizeof(handle->socket_buf) - 1, r)) = '\0';
+          (size_t)ESL_CLAMP((esl_ssize_t)0,
+                            (esl_ssize_t)(sizeof(handle->socket_buf) - 1), r)) =
+            '\0';
         esl_buffer_write(handle->packet_buf, handle->socket_buf, r);
       }
 
@@ -1203,7 +1212,7 @@ parse_event:
 
         if (esl_log_level >= 7) {
           char *foo;
-          esl_event_serialize(handle->last_ievent, &foo, ESL_FALSE);
+          esl_event_serialize(handle->last_ievent, &foo, false);
           esl_log(ESL_LOG_DEBUG, "RECV EVENT\n%s\n", foo);
           free(foo);
         }
@@ -1214,7 +1223,7 @@ parse_event:
 
     if (esl_log_level >= 7) {
       char *foo;
-      esl_event_serialize(revent, &foo, ESL_FALSE);
+      esl_event_serialize(revent, &foo, false);
       esl_log(ESL_LOG_DEBUG, "RECV MESSAGE\n%s\n", foo);
       free(foo);
     }
@@ -1360,4 +1369,12 @@ esl_separate_string_string(char *buf, const char *delim, char **array,
   }
 
   return count;
+}
+
+static int esl_safe_strcasecmp(const char *s1, const char *s2) {
+  if (!(s1 && s2)) {
+    return 1;
+  }
+
+  return strcasecmp(s1, s2);
 }

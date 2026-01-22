@@ -26,17 +26,8 @@
 #ifndef parson_parson_h
 #define parson_parson_h
 
-#include <stddef.h> /* size_t */
+#include <stddef.h>
 #include <stdint.h>
-
-#if !defined(__cplusplus) && !defined(constexpr)
-#define constexpr static const
-#endif
-
-constexpr int PARSON_VERSION_MAJOR = 1;
-constexpr int PARSON_VERSION_MINOR = 5;
-constexpr int PARSON_VERSION_PATCH = 3;
-constexpr char PARSON_VERSION_STRING[] = "1.5.3";
 
 /* Types and enums */
 typedef struct json_object_t JSON_Object;

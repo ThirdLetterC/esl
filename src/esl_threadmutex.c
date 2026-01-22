@@ -43,7 +43,7 @@ void esl_thread_override_default_stacksize(size_t size) {
 }
 
 static void *thread_launch(void *args) {
-  auto *thread = (esl_thread_t *)args;
+  esl_thread_t *thread = (esl_thread_t *)args;
   void *exit_val = thread->function(thread, thread->private_data);
   pthread_attr_destroy(&thread->attribute);
   free(thread);
