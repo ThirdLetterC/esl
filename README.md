@@ -5,7 +5,7 @@ Pure C client library for the FreeSWITCH Event Socket Library (ESL). It includes
 ## Requirements
 - FreeSWITCH with the event socket listener enabled (default: `localhost:8021`, password `ClueCon`) to run the sample client.
 - A C23-capable toolchain. The sources use modern C features such as `auto`, `nullptr`, and `[[nodiscard]]`.
-- POSIX: `pthread` is used for threading; Windows builds need Winsock.
+- POSIX: `pthread` is used for threading.
 
 ## Build quickstart
 Compile everything (library + sample) with a single command:
