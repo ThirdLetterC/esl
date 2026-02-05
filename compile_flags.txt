@@ -1,9 +1,8 @@
 -xc
 -std=c23
--I
-src/include
 -Wall
 -Wextra
 -Wpedantic
 -Werror
 -pthread
+-Iinclude

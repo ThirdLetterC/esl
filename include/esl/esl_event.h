@@ -34,7 +34,7 @@
 #ifndef ESL_EVENT_H
 #define ESL_EVENT_H
 
-#include "esl_base.h"
+#include "esl/esl_base.h"
 
 typedef struct esl_event_header esl_event_header_t;
 typedef struct esl_event esl_event_t;

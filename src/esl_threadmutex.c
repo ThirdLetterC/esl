@@ -19,8 +19,8 @@
  *
  */
 
-#include "esl_threadmutex.h"
-#include "esl.h"
+#include "esl/esl_threadmutex.h"
+#include "esl/esl.h"
 
 #include <pthread.h>
 

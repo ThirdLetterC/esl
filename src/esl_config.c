@@ -31,8 +31,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "esl_config.h"
-#include "esl.h"
+#include "esl/esl_config.h"
+#include "esl/esl.h"
 
 ESL_DECLARE(int)
 esl_config_open_file(esl_config_t *cfg, const char *file_path) {

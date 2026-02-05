@@ -22,9 +22,9 @@
 #ifndef ESL_JSON__h
 #define ESL_JSON__h
 
-#include "parson.h"
-
 #include <assert.h>
+
+#include "esl/parson.h"
 
 #ifndef esl_assert
 #define esl_assert(_x) assert(_x)

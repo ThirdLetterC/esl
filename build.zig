@@ -4,6 +4,12 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const c_flags = &[_][]const u8{
+        "-std=c23",
+        "-D_POSIX_C_SOURCE=200112L",
+        "-D_XOPEN_SOURCE=700",
+    };
+
     const esl_sources = &[_][]const u8{
         "src/esl.c",
         "src/esl_buffer.c",
@@ -18,11 +24,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    esl_module.addIncludePath(b.path("src/include"));
-    esl_module.addIncludePath(b.path(".")); // resolves ../../../parson/parson.h
+    esl_module.addIncludePath(b.path("include"));
     esl_module.addCSourceFiles(.{
         .files = esl_sources,
-        .flags = &.{ "-std=c23" },
+        .flags = c_flags,
         .language = .c,
     });
     esl_module.link_libc = true;
@@ -43,11 +48,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    client_module.addIncludePath(b.path("src/include"));
-    client_module.addIncludePath(b.path("."));
+    client_module.addIncludePath(b.path("include"));
     client_module.addCSourceFiles(.{
-        .files = &.{"testclient.c"},
-        .flags = &.{ "-std=c23" },
+        .files = &.{"examples/testclient.c"},
+        .flags = c_flags,
         .language = .c,
     });
     client_module.linkLibrary(esl);

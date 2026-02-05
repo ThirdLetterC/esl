@@ -31,8 +31,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "esl_event.h"
-#include "esl.h"
+#include "esl/esl_event.h"
+#include "esl/esl.h"
 
 static char *my_dup(const char *s) {
   size_t len = strlen(s) + 1;

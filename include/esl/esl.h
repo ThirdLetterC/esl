@@ -38,9 +38,9 @@
 #ifndef _ESL_H_
 #define _ESL_H_
 
-#include "esl_base.h"
-
 #include <stdarg.h>
+
+#include "esl/esl_base.h"
 
 #define esl_copy_string(_x, _y, _z) snprintf(_x, _z, "%s", _y)
 #define esl_set_string(_x, _y) esl_copy_string(_x, _y, sizeof(_x))

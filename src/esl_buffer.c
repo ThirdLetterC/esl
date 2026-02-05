@@ -31,8 +31,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "esl_buffer.h"
-#include "esl.h"
+#include "esl/esl_buffer.h"
+#include "esl/esl.h"
 
 static unsigned buffer_id = 0;
 

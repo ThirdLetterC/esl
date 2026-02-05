@@ -23,8 +23,6 @@
  THE SOFTWARE.
 */
 
-#include "parson.h"
-
 #include <ctype.h>
 #include <errno.h>
 #include <math.h>
@@ -32,6 +30,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "esl/parson.h"
 
 /* Apparently sscanf is not implemented in some "standard" libraries, so don't
  * use it, if you don't have to. */

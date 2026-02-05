@@ -22,7 +22,7 @@
 #ifndef _ESL_THREADMUTEX_H
 #define _ESL_THREADMUTEX_H
 
-#include "esl_base.h"
+#include "esl/esl_base.h"
 
 typedef struct esl_mutex esl_mutex_t;
 typedef struct esl_thread esl_thread_t;

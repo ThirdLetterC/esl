@@ -31,14 +31,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "esl.h"
-#include "esl_event.h"
-#include "esl_threadmutex.h"
-
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <poll.h>
+
+#include "esl/esl.h"
+#include "esl/esl_event.h"
+#include "esl/esl_threadmutex.h"
 
 #define closesocket(x)                                                         \
   shutdown((x), 2);                                                            \
