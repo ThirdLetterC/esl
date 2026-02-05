@@ -179,12 +179,27 @@ esl_snprintf(char *buffer, size_t count, const char *fmt, ...) {
   va_list ap;
   int ret;
 
+  if (buffer == nullptr || count == 0 || fmt == nullptr) {
+    return -1;
+  }
+
   va_start(ap, fmt);
-  ret = vsnprintf(buffer, count - 1, fmt, ap);
-  if (ret < 0)
+  ret = vsnprintf(buffer, count, fmt, ap);
+  if (ret < 0 || (size_t)ret >= count)
     buffer[count - 1] = '\0';
   va_end(ap);
   return ret;
+}
+
+static void esl_set_last_error(esl_handle_t *handle, int errnum) {
+  if (handle == nullptr) {
+    return;
+  }
+
+  handle->errnum = errnum;
+  if (strerror_r(handle->errnum, handle->err, sizeof(handle->err)) != 0) {
+    *handle->err = '\0';
+  }
 }
 
 static void null_logger(const char *file, const char *func, int line, int level,
@@ -335,6 +350,7 @@ static int sock_setup(esl_handle_t *handle) {
 ESL_DECLARE(esl_status_t)
 esl_attach_handle(esl_handle_t *handle, esl_socket_t socket,
                   struct sockaddr_in *addr) {
+  bool created_mutex = false;
 
   if (!handle || socket == ESL_SOCK_INVALID) {
     return ESL_FAIL;
@@ -351,11 +367,20 @@ esl_attach_handle(esl_handle_t *handle, esl_socket_t socket,
   }
 
   if (!handle->mutex) {
-    esl_mutex_create(&handle->mutex);
+    if (esl_mutex_create(&handle->mutex) != ESL_SUCCESS) {
+      return ESL_FAIL;
+    }
+    created_mutex = true;
   }
 
   if (!handle->packet_buf) {
-    esl_buffer_create(&handle->packet_buf, BUF_CHUNK, BUF_START, 0);
+    if (esl_buffer_create(&handle->packet_buf, BUF_CHUNK, BUF_START, 0) !=
+        ESL_SUCCESS) {
+      if (created_mutex) {
+        esl_mutex_destroy(&handle->mutex);
+      }
+      return ESL_FAIL;
+    }
   }
 
   handle->connected = 1;
@@ -375,7 +400,7 @@ esl_attach_handle(esl_handle_t *handle, esl_socket_t socket,
 
 ESL_DECLARE(esl_status_t)
 esl_sendevent(esl_handle_t *handle, esl_event_t *event) {
-  char *txt;
+  char *txt = nullptr;
   char *event_buf = nullptr;
   esl_status_t status = ESL_FAIL;
   size_t len = 0;
@@ -384,7 +409,9 @@ esl_sendevent(esl_handle_t *handle, esl_event_t *event) {
     return ESL_FAIL;
   }
 
-  esl_event_serialize(event, &txt, false);
+  if (esl_event_serialize(event, &txt, false) != ESL_SUCCESS || txt == nullptr) {
+    return ESL_FAIL;
+  }
 
   esl_log(ESL_LOG_DEBUG, "SEND EVENT\n%s\n", txt);
 
@@ -393,6 +420,7 @@ esl_sendevent(esl_handle_t *handle, esl_event_t *event) {
   assert(event_buf);
 
   if (!event_buf) {
+    free(txt);
     return ESL_FAIL;
   }
 
@@ -445,7 +473,7 @@ esl_execute(esl_handle_t *handle, const char *app, const char *arg,
 ESL_DECLARE(esl_status_t)
 esl_sendmsg(esl_handle_t *handle, esl_event_t *event, const char *uuid) {
   char *cmd_buf = nullptr;
-  char *txt;
+  char *txt = nullptr;
   size_t len = 0;
   esl_status_t status = ESL_FAIL;
 
@@ -453,12 +481,15 @@ esl_sendmsg(esl_handle_t *handle, esl_event_t *event, const char *uuid) {
     return ESL_FAIL;
   }
 
-  esl_event_serialize(event, &txt, false);
+  if (esl_event_serialize(event, &txt, false) != ESL_SUCCESS || txt == nullptr) {
+    return ESL_FAIL;
+  }
   len = strlen(txt) + 100;
   cmd_buf = malloc(len);
   assert(cmd_buf);
 
   if (!cmd_buf) {
+    free(txt);
     return ESL_FAIL;
   }
 
@@ -591,13 +622,20 @@ esl_listen([[maybe_unused]] const char *host, esl_port_t port,
 
     clntLen = sizeof(echoClntAddr);
 
-    if ((client_sock = accept(server_sock, (struct sockaddr *)&echoClntAddr,
-                              &clntLen)) == ESL_SOCK_INVALID &&
-        errno != EINTR) {
+    client_sock = accept(server_sock, (struct sockaddr *)&echoClntAddr, &clntLen);
+    if (client_sock == ESL_SOCK_INVALID) {
+      if (errno == EINTR) {
+        continue;
+      }
       status = ESL_FAIL;
       goto end;
     }
-    prepare_sock(client_sock);
+
+    if (prepare_sock(client_sock) != 0) {
+      closesocket(client_sock);
+      continue;
+    }
+
     callback(server_sock, client_sock, &echoClntAddr, user_data);
   }
 
@@ -647,25 +685,37 @@ esl_listen_threaded([[maybe_unused]] const char *host, esl_port_t port,
 
     clntLen = sizeof(echoClntAddr);
 
-    if ((client_sock = accept(server_sock, (struct sockaddr *)&echoClntAddr,
-                              &clntLen)) == ESL_SOCK_INVALID &&
-        errno != EINTR) {
+    client_sock = accept(server_sock, (struct sockaddr *)&echoClntAddr, &clntLen);
+    if (client_sock == ESL_SOCK_INVALID) {
+      if (errno == EINTR) {
+        continue;
+      }
       status = ESL_FAIL;
       goto end;
     }
 
-    prepare_sock(client_sock);
+    if (prepare_sock(client_sock) != 0) {
+      closesocket(client_sock);
+      continue;
+    }
 
-    handler = malloc(sizeof(*handler));
-    esl_assert(handler);
-
-    memset(handler, 0, sizeof(*handler));
+    handler = calloc(1, sizeof(*handler));
+    if (handler == nullptr) {
+      closesocket(client_sock);
+      status = ESL_FAIL;
+      goto end;
+    }
     handler->callback = callback;
     handler->server_sock = server_sock;
     handler->client_sock = client_sock;
     handler->addr = echoClntAddr;
     handler->user_data = user_data;
-    esl_thread_create_detached(client_thread, handler);
+    if (esl_thread_create_detached(client_thread, handler) != ESL_SUCCESS) {
+      free(handler);
+      closesocket(client_sock);
+      status = ESL_FAIL;
+      goto end;
+    }
   }
 
 end:
@@ -730,11 +780,18 @@ esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
   int fd_flags = 0;
 
   if (!handle->mutex) {
-    esl_mutex_create(&handle->mutex);
+    if (esl_mutex_create(&handle->mutex) != ESL_SUCCESS) {
+      snprintf(handle->err, sizeof(handle->err), "Mutex Allocation Error");
+      return ESL_FAIL;
+    }
   }
 
   if (!handle->packet_buf) {
-    esl_buffer_create(&handle->packet_buf, BUF_CHUNK, BUF_START, 0);
+    if (esl_buffer_create(&handle->packet_buf, BUF_CHUNK, BUF_START, 0) !=
+        ESL_SUCCESS) {
+      snprintf(handle->err, sizeof(handle->err), "Buffer Allocation Error");
+      goto fail;
+    }
   }
 
   hints.ai_socktype = SOCK_STREAM;
@@ -968,13 +1025,21 @@ static esl_ssize_t handle_recv(esl_handle_t *handle, void *data,
     if ((activity = esl_wait_sock(handle->sock, 1000,
                                   ESL_POLL_READ | ESL_POLL_ERROR)) > 0) {
       if ((activity & ESL_POLL_ERROR)) {
+        esl_set_last_error(handle, errno);
         activity = -1;
       } else if ((activity & ESL_POLL_READ)) {
-        if (!(activity = recv(handle->sock, data, datalen, 0))) {
+        auto received = recv(handle->sock, data, datalen, 0);
+        if (received == 0) {
           activity = -1;
-        } else if (activity < 0 && (errno == EINTR || errno == EAGAIN ||
-                                    errno == EWOULDBLOCK)) {
-          activity = 0;
+        } else if (received < 0) {
+          if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
+            activity = 0;
+          } else {
+            esl_set_last_error(handle, errno);
+            activity = -1;
+          }
+        } else {
+          activity = received;
         }
       }
     }
@@ -1064,8 +1129,9 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event) {
     if (rrval == 0) {
       continue;
     } else if (rrval < 0) {
-      if (!(strerror_r(handle->errnum, handle->err, sizeof(handle->err))))
-        *(handle->err) = 0;
+      if (handle->errnum == 0) {
+        esl_set_last_error(handle, errno);
+      }
       goto fail;
     }
 
@@ -1106,8 +1172,9 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event) {
                         sizeof(handle->socket_buf) - 1);
 
         if (r < 0) {
-          if (!(strerror_r(handle->errnum, handle->err, sizeof(handle->err))))
-            *(handle->err) = 0;
+          if (handle->errnum == 0) {
+            esl_set_last_error(handle, errno);
+          }
           free(body);
           goto fail;
         } else if (r == 0) {
@@ -1157,60 +1224,61 @@ parse_event:
         esl_event_types_t et = ESL_EVENT_CLONE;
         char *body = strdup(revent->body);
 
-        esl_event_create(&handle->last_ievent, et);
+        if (body != nullptr &&
+            esl_event_create(&handle->last_ievent, et) == ESL_SUCCESS) {
+          beg = body;
 
-        beg = body;
-
-        while (beg) {
-          if (!(c = strchr(beg, '\n'))) {
-            break;
-          }
-
-          hname = beg;
-          hval = col = nullptr;
-
-          if ((col = strchr(hname, ':'))) {
-            hval = col + 1;
-            *col = '\0';
-            while (*hval == ' ')
-              hval++;
-          }
-
-          *c = '\0';
-
-          if (hval) {
-            esl_url_decode(hval);
-            esl_log(ESL_LOG_DEBUG, "RECV INNER HEADER [%s] = [%s]\n", hname,
-                    hval);
-            if (!strcasecmp(hname, "event-name")) {
-              esl_event_del_header(handle->last_ievent, "event-name");
-              esl_name_event(hval, &handle->last_ievent->event_id);
+          while (beg) {
+            if (!(c = strchr(beg, '\n'))) {
+              break;
             }
 
-            if (!strncmp(hval, "ARRAY::", 7)) {
-              esl_event_add_array(handle->last_ievent, hname, hval);
-            } else {
-              esl_event_add_header_string(handle->last_ievent, ESL_STACK_BOTTOM,
-                                          hname, hval);
+            hname = beg;
+            hval = col = nullptr;
+
+            if ((col = strchr(hname, ':'))) {
+              hval = col + 1;
+              *col = '\0';
+              while (*hval == ' ')
+                hval++;
+            }
+
+            *c = '\0';
+
+            if (hval) {
+              esl_url_decode(hval);
+              esl_log(ESL_LOG_DEBUG, "RECV INNER HEADER [%s] = [%s]\n", hname,
+                      hval);
+              if (!strcasecmp(hname, "event-name")) {
+                esl_event_del_header(handle->last_ievent, "event-name");
+                esl_name_event(hval, &handle->last_ievent->event_id);
+              }
+
+              if (!strncmp(hval, "ARRAY::", 7)) {
+                esl_event_add_array(handle->last_ievent, hname, hval);
+              } else {
+                esl_event_add_header_string(handle->last_ievent,
+                                            ESL_STACK_BOTTOM, hname, hval);
+              }
+            }
+
+            beg = c + 1;
+
+            if (*beg == '\n') {
+              beg++;
+              break;
             }
           }
 
-          beg = c + 1;
-
-          if (*beg == '\n') {
-            beg++;
-            break;
+          if (beg &&
+              esl_event_get_header(handle->last_ievent, "content-length")) {
+            handle->last_ievent->body = strdup(beg);
           }
-        }
-
-        if (beg &&
-            esl_event_get_header(handle->last_ievent, "content-length")) {
-          handle->last_ievent->body = strdup(beg);
         }
 
         free(body);
 
-        if (esl_log_level >= 7) {
+        if (handle->last_ievent != nullptr && esl_log_level >= 7) {
           char *foo;
           esl_event_serialize(handle->last_ievent, &foo, false);
           esl_log(ESL_LOG_DEBUG, "RECV EVENT\n%s\n", foo);
@@ -1248,26 +1316,30 @@ fail:
 }
 
 ESL_DECLARE(esl_status_t) esl_send(esl_handle_t *handle, const char *cmd) {
-  const char *e = cmd + strlen(cmd) - 1;
+  size_t cmdlen = 0;
 
-  if (!handle || !handle->connected || handle->sock == ESL_SOCK_INVALID) {
+  if (!handle || !handle->connected || handle->sock == ESL_SOCK_INVALID ||
+      cmd == nullptr) {
+    return ESL_FAIL;
+  }
+
+  cmdlen = strlen(cmd);
+  if (cmdlen == 0) {
     return ESL_FAIL;
   }
 
   esl_log(ESL_LOG_DEBUG, "SEND\n%s\n", cmd);
 
-  if (send(handle->sock, cmd, strlen(cmd), 0) != (int)strlen(cmd)) {
+  if (send(handle->sock, cmd, cmdlen, 0) != (esl_ssize_t)cmdlen) {
     handle->connected = 0;
-    if (!(strerror_r(handle->errnum, handle->err, sizeof(handle->err))))
-      *(handle->err) = 0;
+    esl_set_last_error(handle, errno);
     return ESL_FAIL;
   }
 
-  if (!(*e == '\n' && *(e - 1) == '\n')) {
+  if (!(cmdlen >= 2 && cmd[cmdlen - 1] == '\n' && cmd[cmdlen - 2] == '\n')) {
     if (send(handle->sock, "\n\n", 2, 0) != 2) {
       handle->connected = 0;
-      if (!(strerror_r(handle->errnum, handle->err, sizeof(handle->err))))
-        *(handle->err) = 0;
+      esl_set_last_error(handle, errno);
       return ESL_FAIL;
     }
   }

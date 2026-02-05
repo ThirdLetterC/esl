@@ -385,7 +385,6 @@ esl_event_add_array(esl_event_t *event, const char *var, const char *val) {
   char *data;
   char **array;
   int max = 0;
-  int len;
   const char *p;
   int i;
 
@@ -403,11 +402,15 @@ esl_event_add_array(esl_event_t *event, const char *var, const char *val) {
   }
 
   data = strdup(val + 7);
+  if (data == nullptr) {
+    return -1;
+  }
 
-  len = (sizeof(char *) * max) + 1;
-  array = malloc(len);
-  esl_assert(array);
-  memset(array, 0, len);
+  array = calloc((size_t)max, sizeof(char *));
+  if (array == nullptr) {
+    free(data);
+    return -1;
+  }
 
   esl_separate_string_string(data, "|:", array, max);
 

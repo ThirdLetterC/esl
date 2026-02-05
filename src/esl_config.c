@@ -184,7 +184,7 @@ esl_config_next_pair(esl_config_t *cfg, char **var, char **val) {
         (*val)++;
       }
 
-      while ((*p == ' ' || *p == '\t') && p != *var) {
+      while (p != *var && (*p == ' ' || *p == '\t')) {
         *p = '\0';
         p--;
       }
@@ -207,14 +207,20 @@ ESL_DECLARE(int)
 esl_config_get_cas_bits(char *strvalue, unsigned char *outbits) {
   char cas_bits[5];
   unsigned char bit = 0x8;
-  char *double_colon = strchr(strvalue, ':');
+  char *double_colon = nullptr;
   int x = 0;
+
+  if (strvalue == nullptr || outbits == nullptr) {
+    return -1;
+  }
+
+  double_colon = strchr(strvalue, ':');
 
   if (!double_colon) {
     esl_log(ESL_LOG_ERROR,
             "No CAS bits specified: %s, :xxxx definition expected, where x is "
             "1 or 0\n",
-            double_colon);
+            strvalue);
     return -1;
   }
 
