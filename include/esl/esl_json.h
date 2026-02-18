@@ -19,8 +19,7 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   THE SOFTWARE.
 */
-#ifndef ESL_JSON__h
-#define ESL_JSON__h
+#pragma once
 
 #include <assert.h>
 
@@ -253,5 +252,3 @@ esl_json_add_child_string(cJSON *parent, const char *name, const char *val) {
 
   return json_object_get_value(obj, name);
 }
-
-#endif

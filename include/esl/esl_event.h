@@ -31,8 +31,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ESL_EVENT_H
-#define ESL_EVENT_H
+#pragma once
 
 #include "esl/esl_base.h"
 
@@ -343,5 +342,3 @@ esl_event_set_body(esl_event_t *event, const char *body);
 ESL_DECLARE(const char *) esl_priority_name(esl_priority_t priority);
 
 ///\}
-
-#endif /* defined(ESL_EVENT_H) */
