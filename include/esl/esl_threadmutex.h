@@ -19,8 +19,7 @@
  *
  */
 
-#ifndef _ESL_THREADMUTEX_H
-#define _ESL_THREADMUTEX_H
+#pragma once
 
 #include "esl/esl_base.h"
 
@@ -38,5 +37,3 @@ ESL_DECLARE(esl_status_t) esl_mutex_destroy(esl_mutex_t **mutex);
 ESL_DECLARE(esl_status_t) esl_mutex_lock(esl_mutex_t *mutex);
 ESL_DECLARE(esl_status_t) esl_mutex_trylock(esl_mutex_t *mutex);
 ESL_DECLARE(esl_status_t) esl_mutex_unlock(esl_mutex_t *mutex);
-
-#endif /* defined(_ESL_THREADMUTEX_H) */

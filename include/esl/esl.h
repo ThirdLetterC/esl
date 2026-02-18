@@ -31,12 +31,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #endif
-
-#ifndef _ESL_H_
-#define _ESL_H_
 
 #include <stdarg.h>
 
@@ -385,5 +384,3 @@ esl_separate_string_string(char *buf, const char *delim, char **array,
 #define esl_recv_timed(_h, _ms) esl_recv_event_timed(_h, _ms, 0, nullptr)
 
 static int esl_safe_strcasecmp(const char *s1, const char *s2);
-
-#endif /* defined(_ESL_H_) */

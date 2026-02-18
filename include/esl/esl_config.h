@@ -49,8 +49,7 @@
  * @{
  */
 
-#ifndef ESL_CONFIG_H
-#define ESL_CONFIG_H
+#pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -154,5 +153,3 @@ ESL_DECLARE(int)
 esl_config_get_cas_bits(char *strvalue, unsigned char *outbits);
 
 /** @} */
-
-#endif /* defined(ESL_CONFIG_H) */

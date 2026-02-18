@@ -2,8 +2,7 @@
  * Fundamental ESL type and macro definitions extracted to break cyclic
  * header inclusions.
  */
-#ifndef ESL_BASE_H
-#define ESL_BASE_H
+#pragma once
 
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
@@ -32,5 +31,3 @@ typedef enum {
   ESL_DISCONNECTED,
   ESL_GENERR
 } esl_status_t;
-
-#endif /* ESL_BASE_H */

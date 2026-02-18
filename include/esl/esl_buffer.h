@@ -30,8 +30,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef ESL_BUFFER_H
-#define ESL_BUFFER_H
+#pragma once
 
 /**
  * @defgroup esl_buffer Buffer Routines
@@ -144,5 +143,3 @@ esl_buffer_seek(esl_buffer_t *buffer, esl_size_t datalen);
 
 ESL_DECLARE(esl_size_t)
 esl_buffer_zwrite(esl_buffer_t *buffer, const void *data, esl_size_t datalen);
-
-#endif
