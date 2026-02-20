@@ -33,9 +33,26 @@
 
 #pragma once
 
+#include <assert.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <sys/ioctl.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "esl/esl_base.h"
+#include "esl_buffer.h"
 
 #define esl_copy_string(_x, _y, _z) snprintf(_x, _z, "%s", _y)
 #define esl_set_string(_x, _y) esl_copy_string(_x, _y, sizeof(_x))
@@ -112,23 +129,6 @@ typedef enum {
 #define ESL_SEQ_CLEARLINEEND ESL_SEQ_ESC ESL_SEQ_CLEARLINEEND_CHAR
 #define ESL_SEQ_CLEARSCR ESL_SEQ_ESC ESL_SEQ_CLEARSCR_CHAR ESL_SEQ_HOME
 
-#include <sys/time.h>
-#include <time.h>
-
-#include <assert.h>
-#include <ctype.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <sys/select.h>
-#include <sys/types.h>
-#include <unistd.h>
-
 #define esl_assert(_x) assert(_x)
 
 #define esl_safe_free(_x)                                                      \
@@ -139,14 +139,7 @@ typedef enum {
 #define esl_strlen_zero_buf(s) (*(s) == '\0')
 #define end_of(_s) *(*(_s) == '\0' ? (_s) : (_s) + strlen(_s) - 1)
 
-#include <stdint.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/types.h>
 #define ESL_SOCK_INVALID -1
-
-#include "esl_buffer.h"
-#include "esl_json.h"
 
 #define BUF_CHUNK 65536 * 50
 #define BUF_START 65536 * 100

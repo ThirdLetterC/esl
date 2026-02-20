@@ -131,8 +131,3 @@ void usage_example() {
 4. **Macro Constants:** Avoid `#define` for values; use `constexpr`.
 5. **Implicit Fallthrough:** Switch cases falling through without `[[fallthrough]]` are forbidden.
 6. **VLAs:** No Variable Length Arrays on the stack.
-
-## 8. Project-Specific Conventions
-
-* **File Naming:** Use lowercase with underscores (e.g., `modem_manager.c`).
-* **Vendor Code:** Isolate third-party/vendor code in a separate directory and do not modify it directly.

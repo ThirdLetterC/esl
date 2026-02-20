@@ -32,6 +32,8 @@
  */
 #pragma once
 
+#include "esl/esl_base.h"
+
 /**
  * @defgroup esl_buffer Buffer Routines
  * @ingroup buffer
@@ -41,8 +43,6 @@
  */
 struct esl_buffer;
 typedef struct esl_buffer esl_buffer_t;
-
-#include "esl/esl_base.h"
 
 /*! \brief Allocate a new dynamic esl_buffer
  * \param buffer returned pointer to the new buffer

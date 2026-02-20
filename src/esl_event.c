@@ -33,6 +33,8 @@
 
 #include "esl/esl_event.h"
 #include "esl/esl.h"
+#include "esl/esl_json.h"
+#include <ctype.h>
 
 static char *my_dup(const char *s) {
   size_t len = strlen(s) + 1;
