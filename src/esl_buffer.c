@@ -281,7 +281,8 @@ esl_buffer_write(esl_buffer_t *buffer, const void *data, esl_size_t datalen) {
     return buffer->used;
   }
 
-  if (buffer->used > buffer->datalen || buffer->actually_used > buffer->datalen) {
+  if (buffer->used > buffer->datalen ||
+      buffer->actually_used > buffer->datalen) {
     return 0;
   }
   if (buffer->max_len && datalen > (buffer->max_len - buffer->used)) {

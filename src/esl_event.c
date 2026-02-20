@@ -35,11 +35,17 @@
 #include "esl/esl.h"
 #include "esl/esl_json.h"
 #include <ctype.h>
+#include <limits.h>
 
 static char *my_dup(const char *s) {
+  if (s == nullptr) {
+    return nullptr;
+  }
   size_t len = strlen(s) + 1;
   void *new = calloc(len, sizeof(char));
-  esl_assert(new);
+  if (new == nullptr) {
+    return nullptr;
+  }
 
   return (char *)memcpy(new, s, len);
 }
@@ -175,6 +181,10 @@ esl_name_event(const char *name, esl_event_types_t *type) {
 ESL_DECLARE(esl_status_t)
 esl_event_create_subclass(esl_event_t **event, esl_event_types_t event_id,
                           const char *subclass_name) {
+  if (event == nullptr) {
+    return ESL_FAIL;
+  }
+
   *event = nullptr;
 
   if ((event_id != ESL_EVENT_CLONE && event_id != ESL_EVENT_CUSTOM) &&
@@ -183,20 +193,33 @@ esl_event_create_subclass(esl_event_t **event, esl_event_types_t event_id,
   }
 
   *event = ALLOC(sizeof(esl_event_t));
-  esl_assert(*event);
+  if (*event == nullptr) {
+    return ESL_FAIL;
+  }
 
   memset(*event, 0, sizeof(esl_event_t));
 
   if (event_id != ESL_EVENT_CLONE) {
     (*event)->event_id = event_id;
-    esl_event_add_header_string(*event, ESL_STACK_BOTTOM, "Event-Name",
-                                esl_event_name((*event)->event_id));
+    if (esl_event_add_header_string(*event, ESL_STACK_BOTTOM, "Event-Name",
+                                    esl_event_name((*event)->event_id)) !=
+        ESL_SUCCESS) {
+      esl_event_destroy(event);
+      return ESL_FAIL;
+    }
   }
 
   if (subclass_name) {
     (*event)->subclass_name = DUP(subclass_name);
-    esl_event_add_header_string(*event, ESL_STACK_BOTTOM, "Event-Subclass",
-                                subclass_name);
+    if ((*event)->subclass_name == nullptr) {
+      esl_event_destroy(event);
+      return ESL_FAIL;
+    }
+    if (esl_event_add_header_string(*event, ESL_STACK_BOTTOM, "Event-Subclass",
+                                    subclass_name) != ESL_SUCCESS) {
+      esl_event_destroy(event);
+      return ESL_FAIL;
+    }
   }
 
   return ESL_SUCCESS;
@@ -344,13 +367,19 @@ static esl_event_header_t *new_header(const char *header_name) {
   } else {
 #endif
     header = ALLOC(sizeof(*header));
-    esl_assert(header);
 #ifdef ESL_EVENT_RECYCLE
   }
 #endif
 
+  if (header == nullptr) {
+    return nullptr;
+  }
   memset(header, 0, sizeof(*header));
   header->name = DUP(header_name);
+  if (header->name == nullptr) {
+    FREE(header);
+    return nullptr;
+  }
 
   return header;
 }
@@ -436,15 +465,27 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
   char *index_ptr;
   int index = 0;
   char *real_header_name = nullptr;
+  esl_event_header_t *owned_new_header = nullptr;
+
+  if (event == nullptr || header_name == nullptr || data == nullptr) {
+    FREE(data);
+    return ESL_FAIL;
+  }
 
   if (!strcmp(header_name, "_body")) {
-    esl_event_set_body(event, data);
+    const esl_status_t body_status = esl_event_set_body(event, data);
+    FREE(data);
+    return body_status;
   }
 
   if ((index_ptr = strchr(header_name, '['))) {
     index_ptr++;
     index = atoi(index_ptr);
     real_header_name = DUP(header_name);
+    if (real_header_name == nullptr) {
+      FREE(data);
+      return ESL_FAIL;
+    }
     if ((index_ptr = strchr(real_header_name, '['))) {
       *index_ptr++ = '\0';
     }
@@ -457,6 +498,10 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
     if (!(header = esl_event_get_header_ptr(event, header_name)) && index_ptr) {
 
       tmp_header = header = new_header(header_name);
+      if (header == nullptr) {
+        goto fail;
+      }
+      owned_new_header = tmp_header;
 
       if (esl_test_flag(event, ESL_EF_UNIQ_HEADERS)) {
         esl_event_del_header(event, header_name);
@@ -470,32 +515,59 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
       if (index_ptr) {
         if (index > -1 && index <= 4000) {
           if (index < header->idx) {
+            char *replacement = DUP(data);
+            if (replacement == nullptr) {
+              goto fail;
+            }
             FREE(header->array[index]);
-            header->array[index] = DUP(data);
+            header->array[index] = replacement;
           } else {
             int i;
             char **m;
+            const auto target_index = (size_t)index + 1;
 
-            m = realloc(header->array, sizeof(char *) * (index + 1));
-            esl_assert(m);
+            if (target_index > (SIZE_MAX / sizeof(char *))) {
+              goto fail;
+            }
+            m = realloc(header->array, sizeof(char *) * target_index);
+            if (m == nullptr) {
+              goto fail;
+            }
             header->array = m;
             for (i = header->idx; i < index; i++) {
               m[i] = DUP("");
+              if (m[i] == nullptr) {
+                int j;
+                for (j = header->idx; j < i; j++) {
+                  FREE(m[j]);
+                }
+                goto fail;
+              }
             }
             m[index] = DUP(data);
+            if (m[index] == nullptr) {
+              int j;
+              for (j = header->idx; j < index; j++) {
+                FREE(m[j]);
+              }
+              goto fail;
+            }
             header->idx = index + 1;
             if (!fly) {
               exists = 1;
             }
 
             FREE(data);
+            data = nullptr;
             goto redraw;
           }
         } else if (tmp_header) {
           free_header(&tmp_header);
+          owned_new_header = nullptr;
         }
 
         FREE(data);
+        data = nullptr;
         goto end;
       } else {
         if ((stack & ESL_STACK_PUSH) || (stack & ESL_STACK_UNSHIFT)) {
@@ -521,12 +593,19 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
     }
 
     if (strstr(data, "ARRAY::")) {
-      esl_event_add_array(event, header_name, data);
+      if (esl_event_add_array(event, header_name, data) != 0) {
+        goto fail;
+      }
       FREE(data);
+      data = nullptr;
       goto end;
     }
 
     header = new_header(header_name);
+    if (header == nullptr) {
+      goto fail;
+    }
+    owned_new_header = header;
   }
 
   if ((stack & ESL_STACK_PUSH) || (stack & ESL_STACK_UNSHIFT)) {
@@ -537,24 +616,36 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
 
     if (header->value && !header->idx) {
       m = calloc(1, sizeof(char *));
-      esl_assert(m);
+      if (m == nullptr) {
+        goto fail;
+      }
       m[0] = header->value;
       header->value = nullptr;
       header->array = m;
       header->idx++;
     }
 
+    if (header->idx == INT_MAX) {
+      goto fail;
+    }
     i = header->idx + 1;
-    m = realloc(header->array, sizeof(char *) * i);
-    esl_assert(m);
+    if ((size_t)i > (SIZE_MAX / sizeof(char *))) {
+      goto fail;
+    }
+    m = realloc(header->array, sizeof(char *) * (size_t)i);
+    if (m == nullptr) {
+      goto fail;
+    }
 
     if ((stack & ESL_STACK_PUSH)) {
       m[header->idx] = data;
+      data = nullptr;
     } else if ((stack & ESL_STACK_UNSHIFT)) {
       for (j = header->idx; j > 0; j--) {
         m[j] = m[j - 1];
       }
       m[0] = data;
+      data = nullptr;
     }
 
     header->idx++;
@@ -563,14 +654,25 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
   redraw:
     len = 0;
     for (j = 0; j < header->idx; j++) {
-      esl_assert(header->array[j]);
-      len += strlen(header->array[j]) + 2;
+      if (header->array[j] == nullptr) {
+        goto fail;
+      }
+      const auto value_len = strlen(header->array[j]);
+      if (value_len > (SIZE_MAX - len - 2)) {
+        goto fail;
+      }
+      len += value_len + 2;
     }
 
     if (len) {
+      if (len > (SIZE_MAX - 8)) {
+        goto fail;
+      }
       len += 8;
       hv = realloc(header->value, len);
-      esl_assert(hv);
+      if (hv == nullptr) {
+        goto fail;
+      }
       header->value = hv;
 
       if (header->idx > 1) {
@@ -588,6 +690,7 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
 
   } else {
     header->value = data;
+    data = nullptr;
   }
 
   if (!exists) {
@@ -608,6 +711,7 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
       }
       event->last_header = header;
     }
+    owned_new_header = nullptr;
   }
 
 end:
@@ -615,6 +719,14 @@ end:
   esl_safe_free(real_header_name);
 
   return ESL_SUCCESS;
+
+fail:
+  if (owned_new_header != nullptr) {
+    free_header(&owned_new_header);
+  }
+  FREE(data);
+  esl_safe_free(real_header_name);
+  return ESL_FAIL;
 }
 
 ESL_DECLARE(esl_status_t)
@@ -639,17 +751,27 @@ ESL_DECLARE(esl_status_t)
 esl_event_add_header_string(esl_event_t *event, esl_stack_t stack,
                             const char *header_name, const char *data) {
   if (data) {
-    return esl_event_base_add_header(event, stack, header_name, DUP(data));
+    char *copy = DUP(data);
+    if (copy == nullptr) {
+      return ESL_FAIL;
+    }
+    return esl_event_base_add_header(event, stack, header_name, copy);
   }
   return ESL_FAIL;
 }
 
 ESL_DECLARE(esl_status_t)
 esl_event_set_body(esl_event_t *event, const char *body) {
+  if (event == nullptr) {
+    return ESL_FAIL;
+  }
   esl_safe_free(event->body);
 
   if (body) {
     event->body = DUP(body);
+    if (event->body == nullptr) {
+      return ESL_FAIL;
+    }
   }
 
   return ESL_SUCCESS;
@@ -741,17 +863,27 @@ esl_event_dup(esl_event_t **event, esl_event_t *todup) {
     if (hp->idx) {
       int i;
       for (i = 0; i < hp->idx; i++) {
-        esl_event_add_header_string(*event, ESL_STACK_PUSH, hp->name,
-                                    hp->array[i]);
+        if (esl_event_add_header_string(*event, ESL_STACK_PUSH, hp->name,
+                                        hp->array[i]) != ESL_SUCCESS) {
+          esl_event_destroy(event);
+          return ESL_FAIL;
+        }
       }
     } else {
-      esl_event_add_header_string(*event, ESL_STACK_BOTTOM, hp->name,
-                                  hp->value);
+      if (esl_event_add_header_string(*event, ESL_STACK_BOTTOM, hp->name,
+                                      hp->value) != ESL_SUCCESS) {
+        esl_event_destroy(event);
+        return ESL_FAIL;
+      }
     }
   }
 
   if (todup->body) {
     (*event)->body = DUP(todup->body);
+    if ((*event)->body == nullptr) {
+      esl_event_destroy(event);
+      return ESL_FAIL;
+    }
   }
 
   (*event)->key = todup->key;
@@ -765,22 +897,25 @@ esl_event_serialize(esl_event_t *event, char **str, bool encode) {
   esl_event_header_t *hp;
   esl_size_t llen = 0, dlen = 0, blocksize = 512, encode_len = 1536,
              new_len = 0;
-  char *buf;
+  char *buf = nullptr;
   char *encode_buf = nullptr; /* used for url encoding of variables to make sure
                               unsafe things stay out of the serialized copy */
 
+  if (event == nullptr || str == nullptr) {
+    return ESL_FAIL;
+  }
   *str = nullptr;
 
   dlen = blocksize * 2;
 
-  if (!(buf = calloc(dlen, sizeof(char)))) {
-    abort();
+  if ((buf = calloc(dlen, sizeof(char))) == nullptr) {
+    goto fail;
   }
 
   /* go ahead and give ourselves some space to work with, should save a few
    * reallocs */
-  if (!(encode_buf = calloc(encode_len, sizeof(char)))) {
-    abort();
+  if ((encode_buf = calloc(encode_len, sizeof(char))) == nullptr) {
+    goto fail;
   }
 
   /* esl_log_printf(ESL_CHANNEL_LOG, ESL_LOG_INFO, "hit serialized!.\n"); */
@@ -798,10 +933,24 @@ esl_event_serialize(esl_event_t *event, char **str, bool encode) {
       int i;
       new_len = 0;
       for (i = 0; i < hp->idx; i++) {
-        new_len += (strlen(hp->array[i]) * 3) + 1;
+        if (hp->array[i] == nullptr) {
+          goto fail;
+        }
+        const auto value_len = strlen(hp->array[i]);
+        if (value_len > ((SIZE_MAX - 1 - new_len) / 3)) {
+          goto fail;
+        }
+        new_len += (value_len * 3) + 1;
       }
     } else {
-      new_len = (strlen(hp->value) * 3) + 1;
+      if (hp->value == nullptr) {
+        goto fail;
+      }
+      const auto value_len = strlen(hp->value);
+      if (value_len > ((SIZE_MAX - 1) / 3)) {
+        goto fail;
+      }
+      new_len = (value_len * 3) + 1;
     }
 
     if (encode_len < new_len) {
@@ -810,8 +959,8 @@ esl_event_serialize(esl_event_t *event, char **str, bool encode) {
       /* keep track of the size of our allocation */
       encode_len = new_len;
 
-      if (!(tmp = realloc(encode_buf, encode_len))) {
-        abort();
+      if ((tmp = realloc(encode_buf, encode_len)) == nullptr) {
+        goto fail;
       }
 
       encode_buf = tmp;
@@ -826,15 +975,30 @@ esl_event_serialize(esl_event_t *event, char **str, bool encode) {
       esl_snprintf(encode_buf, encode_len, "%s", hp->value);
     }
 
+    if (hp->name == nullptr) {
+      goto fail;
+    }
+    if (strlen(hp->name) > (SIZE_MAX - strlen(encode_buf) - 8)) {
+      goto fail;
+    }
     llen = strlen(hp->name) + strlen(encode_buf) + 8;
 
     if ((len + llen) > dlen) {
       char *m;
+      if (len > (SIZE_MAX - llen)) {
+        goto fail;
+      }
+      if (blocksize > (SIZE_MAX - (len + llen))) {
+        goto fail;
+      }
+      if (dlen > (SIZE_MAX - (blocksize + (len + llen)))) {
+        goto fail;
+      }
       dlen += (blocksize + (len + llen));
       if ((m = realloc(buf, dlen))) {
         buf = m;
       } else {
-        abort();
+        goto fail;
       }
     }
 
@@ -847,7 +1011,7 @@ esl_event_serialize(esl_event_t *event, char **str, bool encode) {
   esl_safe_free(encode_buf);
 
   if (event->body) {
-    int blen = (int)strlen(event->body);
+    const size_t blen = strlen(event->body);
     llen = blen;
 
     if (blen) {
@@ -858,16 +1022,25 @@ esl_event_serialize(esl_event_t *event, char **str, bool encode) {
 
     if ((len + llen) > dlen) {
       char *m;
+      if (len > (SIZE_MAX - llen)) {
+        goto fail;
+      }
+      if (blocksize > (SIZE_MAX - (len + llen))) {
+        goto fail;
+      }
+      if (dlen > (SIZE_MAX - (blocksize + (len + llen)))) {
+        goto fail;
+      }
       dlen += (blocksize + (len + llen));
       if ((m = realloc(buf, dlen))) {
         buf = m;
       } else {
-        abort();
+        goto fail;
       }
     }
 
     if (blen) {
-      esl_snprintf(buf + len, dlen - len, "Content-Length: %d\n\n%s", blen,
+      esl_snprintf(buf + len, dlen - len, "Content-Length: %zu\n\n%s", blen,
                    event->body);
     } else {
       esl_snprintf(buf + len, dlen - len, "\n");
@@ -879,6 +1052,12 @@ esl_event_serialize(esl_event_t *event, char **str, bool encode) {
   *str = buf;
 
   return ESL_SUCCESS;
+
+fail:
+  FREE(encode_buf);
+  FREE(buf);
+  *str = nullptr;
+  return ESL_FAIL;
 }
 
 ESL_DECLARE(esl_status_t)
