@@ -51,7 +51,12 @@ struct esl_buffer {
 ESL_DECLARE(esl_status_t)
 esl_buffer_create(esl_buffer_t **buffer, esl_size_t blocksize,
                   esl_size_t start_len, esl_size_t max_len) {
-  esl_buffer_t *new_buffer;
+  esl_buffer_t *new_buffer = nullptr;
+
+  if (buffer == nullptr) {
+    return ESL_FAIL;
+  }
+  *buffer = nullptr;
 
   new_buffer = calloc(1, sizeof(*new_buffer));
 
@@ -94,6 +99,9 @@ ESL_DECLARE(esl_size_t) esl_buffer_freespace(esl_buffer_t *buffer) {
   esl_assert(buffer != nullptr);
 
   if (buffer->max_len) {
+    if (buffer->used >= buffer->max_len) {
+      return 0;
+    }
     return (esl_size_t)(buffer->max_len - buffer->used);
   }
   return 1000000;
@@ -273,6 +281,13 @@ esl_buffer_write(esl_buffer_t *buffer, const void *data, esl_size_t datalen) {
     return buffer->used;
   }
 
+  if (buffer->used > buffer->datalen || buffer->actually_used > buffer->datalen) {
+    return 0;
+  }
+  if (buffer->max_len && datalen > (buffer->max_len - buffer->used)) {
+    return 0;
+  }
+
   actual_freespace = buffer->datalen - buffer->actually_used;
   if (actual_freespace < datalen &&
       (!buffer->max_len || (buffer->used + datalen <= buffer->max_len))) {
@@ -294,7 +309,13 @@ esl_buffer_write(esl_buffer_t *buffer, const void *data, esl_size_t datalen) {
     esl_size_t new_size, new_block_size;
     void *data1;
 
+    if (datalen > (SIZE_MAX - buffer->datalen)) {
+      return 0;
+    }
     new_size = buffer->datalen + datalen;
+    if (buffer->blocksize > (SIZE_MAX - buffer->datalen)) {
+      return 0;
+    }
     new_block_size = buffer->datalen + buffer->blocksize;
 
     if (new_block_size > new_size) {

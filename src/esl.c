@@ -282,7 +282,7 @@ ESL_DECLARE(void) esl_global_set_default_logger(int level) {
 }
 
 ESL_DECLARE(size_t) esl_url_encode(const char *url, char *buf, size_t len) {
-  const char *p;
+  const unsigned char *p;
   size_t x = 0;
   const char urlunsafe[] = "\r\n \"#%&+:;<=>?@[\\]^`{|}";
   const char hex[] = "0123456789ABCDEF";
@@ -295,21 +295,25 @@ ESL_DECLARE(size_t) esl_url_encode(const char *url, char *buf, size_t len) {
     return 0;
   }
 
+  if (len == 0) {
+    return 0;
+  }
+
   len--;
 
-  for (p = url; *p; p++) {
+  for (p = (const unsigned char *)url; *p; p++) {
     if (x >= len) {
       break;
     }
-    if (*p < ' ' || *p > '~' || strchr(urlunsafe, *p)) {
+    if (*p < ' ' || *p > '~' || strchr(urlunsafe, (int)*p)) {
       if ((x + 3) >= len) {
         break;
       }
       buf[x++] = '%';
-      buf[x++] = hex[*p >> 4];
+      buf[x++] = hex[(*p >> 4) & 0x0f];
       buf[x++] = hex[*p & 0x0f];
     } else {
-      buf[x++] = *p;
+      buf[x++] = (char)*p;
     }
   }
   buf[x] = '\0';
@@ -779,6 +783,10 @@ esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
   socklen_t socklen;
   int fd_flags = 0;
 
+  if (handle == nullptr || host == nullptr || password == nullptr) {
+    return ESL_FAIL;
+  }
+
   if (!handle->mutex) {
     if (esl_mutex_create(&handle->mutex) != ESL_SUCCESS) {
       snprintf(handle->err, sizeof(handle->err), "Mutex Allocation Error");
@@ -797,7 +805,14 @@ esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
   hints.ai_socktype = SOCK_STREAM;
 
   if (getaddrinfo(host, nullptr, &hints, &result)) {
-    strncpy(handle->err, "Cannot resolve host", sizeof(handle->err));
+    esl_snprintf(handle->err, sizeof(handle->err), "Cannot resolve host");
+    goto fail;
+  }
+
+  if (result->ai_addrlen > sizeof(handle->sockaddr)) {
+    esl_snprintf(handle->err, sizeof(handle->err),
+                 "Resolved address too large");
+    freeaddrinfo(result);
     goto fail;
   }
 
@@ -816,8 +831,8 @@ esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
     socklen = sizeof(struct sockaddr_in6);
     break;
   default:
-    strncpy(handle->err, "Host resolves to unsupported address family",
-            sizeof(handle->err));
+    esl_snprintf(handle->err, sizeof(handle->err),
+                 "Host resolves to unsupported address family");
     goto fail;
   }
 

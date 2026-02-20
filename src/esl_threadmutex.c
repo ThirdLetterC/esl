@@ -110,6 +110,12 @@ ESL_DECLARE(esl_status_t) esl_mutex_create(esl_mutex_t **mutex) {
   esl_status_t status = ESL_FAIL;
   pthread_mutexattr_t attr;
   esl_mutex_t *check = nullptr;
+  bool attr_initialized = false;
+
+  if (mutex == nullptr) {
+    return ESL_FAIL;
+  }
+  *mutex = nullptr;
 
   check = (esl_mutex_t *)calloc(1, sizeof(**mutex));
   if (!check) {
@@ -117,9 +123,9 @@ ESL_DECLARE(esl_status_t) esl_mutex_create(esl_mutex_t **mutex) {
   }
 
   if (pthread_mutexattr_init(&attr)) {
-    free(check);
     goto done;
   }
+  attr_initialized = true;
 
   if (pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE)) {
     goto fail;
@@ -132,11 +138,14 @@ ESL_DECLARE(esl_status_t) esl_mutex_create(esl_mutex_t **mutex) {
   goto success;
 
 fail:
-  pthread_mutexattr_destroy(&attr);
+  if (attr_initialized) {
+    pthread_mutexattr_destroy(&attr);
+  }
   free(check);
   goto done;
 
 success:
+  pthread_mutexattr_destroy(&attr);
   *mutex = check;
   status = ESL_SUCCESS;
 
@@ -145,6 +154,10 @@ done:
 }
 
 ESL_DECLARE(esl_status_t) esl_mutex_destroy(esl_mutex_t **mutex) {
+  if (mutex == nullptr) {
+    return ESL_FAIL;
+  }
+
   esl_mutex_t *mp = *mutex;
   *mutex = nullptr;
   if (!mp) {
@@ -158,6 +171,9 @@ ESL_DECLARE(esl_status_t) esl_mutex_destroy(esl_mutex_t **mutex) {
 }
 
 ESL_DECLARE(esl_status_t) esl_mutex_lock(esl_mutex_t *mutex) {
+  if (mutex == nullptr) {
+    return ESL_FAIL;
+  }
   if (pthread_mutex_lock(&mutex->mutex)) {
     return ESL_FAIL;
   }
@@ -165,6 +181,9 @@ ESL_DECLARE(esl_status_t) esl_mutex_lock(esl_mutex_t *mutex) {
 }
 
 ESL_DECLARE(esl_status_t) esl_mutex_trylock(esl_mutex_t *mutex) {
+  if (mutex == nullptr) {
+    return ESL_FAIL;
+  }
   if (pthread_mutex_trylock(&mutex->mutex)) {
     return ESL_FAIL;
   }
@@ -172,6 +191,9 @@ ESL_DECLARE(esl_status_t) esl_mutex_trylock(esl_mutex_t *mutex) {
 }
 
 ESL_DECLARE(esl_status_t) esl_mutex_unlock(esl_mutex_t *mutex) {
+  if (mutex == nullptr) {
+    return ESL_FAIL;
+  }
   if (pthread_mutex_unlock(&mutex->mutex)) {
     return ESL_FAIL;
   }
