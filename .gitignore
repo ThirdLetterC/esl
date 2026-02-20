@@ -1,5 +1,6 @@
 .vscode
 .zig-cache
+*.o
 
 zig-out
 testclient
