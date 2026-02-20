@@ -4,6 +4,10 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    if (target.result.os.tag == .windows) {
+        std.debug.panic("Windows is not a supported target.", .{});
+    }
+
     const c_flags = &[_][]const u8{
         "-std=c23",
         "-D_POSIX_C_SOURCE=200112L",
@@ -31,11 +35,7 @@ pub fn build(b: *std.Build) void {
         .language = .c,
     });
     esl_module.link_libc = true;
-    if (target.result.os.tag == .windows) {
-        esl_module.linkSystemLibrary("ws2_32", .{});
-    } else {
-        esl_module.linkSystemLibrary("pthread", .{});
-    }
+    esl_module.linkSystemLibrary("pthread", .{});
 
     const esl = b.addLibrary(.{
         .name = "esl",
@@ -56,11 +56,7 @@ pub fn build(b: *std.Build) void {
     });
     client_module.linkLibrary(esl);
     client_module.link_libc = true;
-    if (target.result.os.tag == .windows) {
-        client_module.linkSystemLibrary("ws2_32", .{});
-    } else {
-        client_module.linkSystemLibrary("pthread", .{});
-    }
+    client_module.linkSystemLibrary("pthread", .{});
 
     const testclient = b.addExecutable(.{
         .name = "testclient",
