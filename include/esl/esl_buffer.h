@@ -51,7 +51,7 @@ typedef struct esl_buffer esl_buffer_t;
  * \param max_len length the buffer is allowed to grow to
  * \return status
  */
-ESL_DECLARE(esl_status_t)
+[[nodiscard]] ESL_DECLARE(esl_status_t)
 esl_buffer_create(esl_buffer_t **buffer, esl_size_t blocksize,
                   esl_size_t start_len, esl_size_t max_len);
 

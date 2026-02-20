@@ -213,7 +213,8 @@ typedef struct {
 typedef void (*esl_logger_t)(const char *file, const char *func, int line,
                              int level, const char *fmt, ...);
 
-ESL_DECLARE(int) esl_vasprintf(char **ret, const char *fmt, va_list ap);
+[[nodiscard]] ESL_DECLARE(int) esl_vasprintf(char **ret, const char *fmt,
+                                             va_list ap);
 
 ESL_DECLARE_DATA extern esl_logger_t esl_log;
 
@@ -240,7 +241,7 @@ typedef void (*esl_listen_callback_t)(esl_socket_t server_sock,
     \param addr Structure that will contain the connection descritption (look up
    your os info)
 */
-ESL_DECLARE(esl_status_t)
+[[nodiscard]] ESL_DECLARE(esl_status_t)
 esl_attach_handle(esl_handle_t *handle, esl_socket_t socket,
                   struct sockaddr_in *addr);
 /*!
@@ -251,10 +252,10 @@ esl_attach_handle(esl_handle_t *handle, esl_socket_t socket,
     \param callback Callback that will be called upon data received
 */
 
-ESL_DECLARE(esl_status_t)
+[[nodiscard]] ESL_DECLARE(esl_status_t)
 esl_listen(const char *host, esl_port_t port, esl_listen_callback_t callback,
            void *user_data, esl_socket_t *server_sockP);
-ESL_DECLARE(esl_status_t)
+[[nodiscard]] ESL_DECLARE(esl_status_t)
 esl_listen_threaded(const char *host, esl_port_t port,
                     esl_listen_callback_t callback, void *user_data, int max);
 /*!
@@ -265,7 +266,7 @@ esl_listen_threaded(const char *host, esl_port_t port,
     \param arg Application arguments
     \param uuid Target UUID for the application
 */
-ESL_DECLARE(esl_status_t)
+[[nodiscard]] ESL_DECLARE(esl_status_t)
 esl_execute(esl_handle_t *handle, const char *app, const char *arg,
             const char *uuid);
 /*!
@@ -273,7 +274,7 @@ esl_execute(esl_handle_t *handle, const char *app, const char *arg,
     \param handle Handle to which the event should be sent
     \param event Event to be sent
 */
-ESL_DECLARE(esl_status_t)
+[[nodiscard]] ESL_DECLARE(esl_status_t)
 esl_sendevent(esl_handle_t *handle, esl_event_t *event);
 
 /*!
@@ -282,7 +283,7 @@ esl_sendevent(esl_handle_t *handle, esl_event_t *event);
     \param event Event to be sent
         \param uuid a specific uuid if not the default
 */
-ESL_DECLARE(esl_status_t)
+[[nodiscard]] ESL_DECLARE(esl_status_t)
 esl_sendmsg(esl_handle_t *handle, esl_event_t *event, const char *uuid);
 
 /*!
@@ -295,7 +296,7 @@ esl_sendmsg(esl_handle_t *handle, esl_event_t *event, const char *uuid);
     \param password FreeSWITCH server password
         \param timeout Connection timeout, in miliseconds
 */
-ESL_DECLARE(esl_status_t)
+[[nodiscard]] ESL_DECLARE(esl_status_t)
 esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
                     const char *user, const char *password, uint32_t timeout);
 #define esl_connect(_handle, _host, _port, _user, _password)                   \
@@ -305,13 +306,14 @@ esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
     \brief Disconnect a handle
     \param handle Handle to be disconnected
 */
-ESL_DECLARE(esl_status_t) esl_disconnect(esl_handle_t *handle);
+[[nodiscard]] ESL_DECLARE(esl_status_t) esl_disconnect(esl_handle_t *handle);
 /*!
     \brief Send a raw command using specific handle
     \param handle Handle to send the command to
     \param cmd Command to send
 */
-ESL_DECLARE(esl_status_t) esl_send(esl_handle_t *handle, const char *cmd);
+[[nodiscard]] ESL_DECLARE(esl_status_t) esl_send(esl_handle_t *handle,
+                                                 const char *cmd);
 /*!
     \brief Poll the handle's socket until an event is received or a connection
    error occurs
@@ -321,7 +323,7 @@ ESL_DECLARE(esl_status_t) esl_send(esl_handle_t *handle, const char *cmd);
     \param[out] save_event If this is not nullptr, will return the event
    received
 */
-ESL_DECLARE(esl_status_t)
+[[nodiscard]] ESL_DECLARE(esl_status_t)
 esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event);
 /*!
     \brief Poll the handle's socket until an event is received, a connection
@@ -333,7 +335,7 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event);
     \param[out] save_event If this is not nullptr, will return the event
    received
 */
-ESL_DECLARE(esl_status_t)
+[[nodiscard]] ESL_DECLARE(esl_status_t)
 esl_recv_event_timed(esl_handle_t *handle, uint32_t ms, int check_q,
                      esl_event_t **save_event);
 /*!
@@ -342,7 +344,7 @@ esl_recv_event_timed(esl_handle_t *handle, uint32_t ms, int check_q,
     \param handle Handle to be used
     \param cmd Raw command to send
 */
-ESL_DECLARE(esl_status_t)
+[[nodiscard]] ESL_DECLARE(esl_status_t)
 esl_send_recv_timed(esl_handle_t *handle, const char *cmd, uint32_t ms);
 #define esl_send_recv(_handle, _cmd) esl_send_recv_timed(_handle, _cmd, 0)
 /*!
@@ -351,7 +353,7 @@ esl_send_recv_timed(esl_handle_t *handle, const char *cmd, uint32_t ms);
     \param header Header that the filter will be based on
     \param value The value of the header to filter
 */
-ESL_DECLARE(esl_status_t)
+[[nodiscard]] ESL_DECLARE(esl_status_t)
 esl_filter(esl_handle_t *handle, const char *header, const char *value);
 /*!
     \brief Will subscribe to events on the server
@@ -359,10 +361,10 @@ esl_filter(esl_handle_t *handle, const char *header, const char *value);
     \param etype Event type to subscribe
     \param value Which event to subscribe to
 */
-ESL_DECLARE(esl_status_t)
+[[nodiscard]] ESL_DECLARE(esl_status_t)
 esl_events(esl_handle_t *handle, esl_event_type_t etype, const char *value);
 
-ESL_DECLARE(int)
+[[nodiscard]] ESL_DECLARE(int)
 esl_wait_sock(esl_socket_t sock, uint32_t ms, esl_poll_t flags);
 
 ESL_DECLARE(unsigned int)

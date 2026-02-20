@@ -15,7 +15,7 @@ int main() {
 
   if (esl_send_recv(&handle, "api status\n\n") != ESL_SUCCESS) {
     fprintf(stderr, "Failed to send command\n");
-    esl_disconnect(&handle);
+    (void)esl_disconnect(&handle);
     return EXIT_FAILURE;
   }
 
@@ -30,7 +30,7 @@ int main() {
     fprintf(stderr, "No reply received\n");
   }
 
-  esl_disconnect(&handle);
+  (void)esl_disconnect(&handle);
 
   return EXIT_SUCCESS;
 }

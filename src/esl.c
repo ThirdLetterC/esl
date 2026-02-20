@@ -384,7 +384,7 @@ esl_attach_handle(esl_handle_t *handle, esl_socket_t socket,
 
   handle->connected = 1;
 
-  esl_send_recv(handle, "connect\n\n");
+  (void)esl_send_recv(handle, "connect\n\n");
 
   if (handle->last_sr_event) {
     handle->info_event = handle->last_sr_event;
@@ -392,7 +392,7 @@ esl_attach_handle(esl_handle_t *handle, esl_socket_t socket,
     return ESL_SUCCESS;
   }
 
-  esl_disconnect(handle);
+  (void)esl_disconnect(handle);
 
   return ESL_FAIL;
 }
@@ -890,7 +890,7 @@ esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
     snprintf(sendbuf, sizeof(sendbuf), "userauth %s:%s\n\n", user, password);
   }
 
-  esl_send(handle, sendbuf);
+  (void)esl_send(handle, sendbuf);
 
   if (esl_recv_timed(handle, timeout)) {
     snprintf(handle->err, sizeof(handle->err), "Authentication Error");
@@ -908,7 +908,7 @@ esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
 
 fail:
 
-  esl_disconnect(handle);
+  (void)esl_disconnect(handle);
 
   return ESL_FAIL;
 }
