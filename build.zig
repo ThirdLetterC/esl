@@ -10,7 +10,7 @@ pub fn build(b: *std.Build) void {
 
     const c_flags = &[_][]const u8{
         "-std=c23",
-        "-D_POSIX_C_SOURCE=200112L",
+        "-D_POSIX_C_SOURCE=200809L",
         "-D_XOPEN_SOURCE=700",
     };
 

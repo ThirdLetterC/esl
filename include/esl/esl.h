@@ -33,10 +33,6 @@
 
 #pragma once
 
-#ifndef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 200809L
-#endif
-
 #include <stdarg.h>
 
 #include "esl/esl_base.h"

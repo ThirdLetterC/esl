@@ -4,10 +4,6 @@
  */
 #pragma once
 
-#ifndef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 200809L
-#endif
-
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/types.h>
