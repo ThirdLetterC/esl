@@ -5,3 +5,5 @@ zig-out
 testclient
 freeswitch
 conf
+
+_codeql_detected_source_root
