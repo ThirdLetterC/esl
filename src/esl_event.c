@@ -296,7 +296,7 @@ ESL_DECLARE(esl_status_t)
 esl_event_del_header_val(esl_event_t *event, const char *header_name,
                          const char *val) {
   esl_event_header_t *hp, *lp = nullptr, *tp;
-  esl_status_t status = (esl_status_t)false;
+  esl_status_t status = (esl_status_t) false;
   int x = 0;
   esl_ssize_t hlen = -1;
   unsigned long hash = 0;
@@ -883,19 +883,19 @@ ESL_DECLARE(esl_status_t)
 esl_event_create_json(esl_event_t **event, const char *json) {
   cJSON *cj = cJSON_Parse(json);
   if (cj == nullptr) {
-    return (esl_status_t)false;
+    return (esl_status_t) false;
   }
 
   JSON_Object *root = cjson_get_object(cj);
   if (root == nullptr) {
     cJSON_Delete(cj);
-    return (esl_status_t)false;
+    return (esl_status_t) false;
   }
 
   esl_event_t *new_event = nullptr;
   if (esl_event_create(&new_event, ESL_EVENT_CLONE) != ESL_SUCCESS) {
     cJSON_Delete(cj);
-    return (esl_status_t)false;
+    return (esl_status_t) false;
   }
 
   const size_t count = json_object_get_count(root);

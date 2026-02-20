@@ -409,7 +409,8 @@ esl_sendevent(esl_handle_t *handle, esl_event_t *event) {
     return ESL_FAIL;
   }
 
-  if (esl_event_serialize(event, &txt, false) != ESL_SUCCESS || txt == nullptr) {
+  if (esl_event_serialize(event, &txt, false) != ESL_SUCCESS ||
+      txt == nullptr) {
     return ESL_FAIL;
   }
 
@@ -481,7 +482,8 @@ esl_sendmsg(esl_handle_t *handle, esl_event_t *event, const char *uuid) {
     return ESL_FAIL;
   }
 
-  if (esl_event_serialize(event, &txt, false) != ESL_SUCCESS || txt == nullptr) {
+  if (esl_event_serialize(event, &txt, false) != ESL_SUCCESS ||
+      txt == nullptr) {
     return ESL_FAIL;
   }
   len = strlen(txt) + 100;
@@ -622,7 +624,8 @@ esl_listen([[maybe_unused]] const char *host, esl_port_t port,
 
     clntLen = sizeof(echoClntAddr);
 
-    client_sock = accept(server_sock, (struct sockaddr *)&echoClntAddr, &clntLen);
+    client_sock =
+        accept(server_sock, (struct sockaddr *)&echoClntAddr, &clntLen);
     if (client_sock == ESL_SOCK_INVALID) {
       if (errno == EINTR) {
         continue;
@@ -685,7 +688,8 @@ esl_listen_threaded([[maybe_unused]] const char *host, esl_port_t port,
 
     clntLen = sizeof(echoClntAddr);
 
-    client_sock = accept(server_sock, (struct sockaddr *)&echoClntAddr, &clntLen);
+    client_sock =
+        accept(server_sock, (struct sockaddr *)&echoClntAddr, &clntLen);
     if (client_sock == ESL_SOCK_INVALID) {
       if (errno == EINTR) {
         continue;
