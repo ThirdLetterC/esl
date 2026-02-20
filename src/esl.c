@@ -44,20 +44,21 @@
   shutdown((x), 2);                                                            \
   close((x))
 
-#ifndef ESL_MIN
-#define ESL_MIN(x, y) ((x) < (y) ? (x) : (y))
-#endif
-#ifndef ESL_MAX
-#define ESL_MAX(x, y) ((x) > (y) ? (x) : (y))
-#endif
-#ifndef ESL_CLAMP
-#define ESL_CLAMP(min, max, val) (ESL_MIN(max, ESL_MAX(val, min)))
-#endif
+static inline esl_ssize_t esl_min_ssize(esl_ssize_t x, esl_ssize_t y) {
+  return x < y ? x : y;
+}
+static inline esl_ssize_t esl_max_ssize(esl_ssize_t x, esl_ssize_t y) {
+  return x > y ? x : y;
+}
+static inline esl_ssize_t esl_clamp_ssize(esl_ssize_t min, esl_ssize_t max,
+                                          esl_ssize_t val) {
+  return esl_min_ssize(max, esl_max_ssize(val, min));
+}
 
 constexpr esl_size_t ESL_MAX_CONTENT_LENGTH = 16'777'216;
 
 /* Written by Marc Espie, public domain */
-#define ESL_CTYPE_NUM_CHARS 256
+constexpr esl_ssize_t ESL_CTYPE_NUM_CHARS = 256;
 
 const short _esl_C_toupper_[1 + ESL_CTYPE_NUM_CHARS] = {
     EOF,  0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
@@ -206,8 +207,7 @@ static void esl_set_last_error(esl_handle_t *handle, int errnum) {
 
 static void null_logger([[maybe_unused]] const char *file,
                         [[maybe_unused]] const char *func,
-                        [[maybe_unused]] int line,
-                        [[maybe_unused]] int level,
+                        [[maybe_unused]] int line, [[maybe_unused]] int level,
                         [[maybe_unused]] const char *fmt, ...) {
   return;
 }
@@ -216,7 +216,7 @@ static const char *LEVEL_NAMES[] = {"EMERG", "ALERT",   "CRIT",
                                     "ERROR", "WARNING", "NOTICE",
                                     "INFO",  "DEBUG",   nullptr};
 
-static int esl_log_level = 7;
+static esl_log_level_t esl_log_level = ESL_LOG_LEVEL_DEBUG;
 
 static const char *cut_path(const char *in) {
   const char *p, *ret = in;
@@ -225,7 +225,7 @@ static const char *cut_path(const char *in) {
 
   for (i = delims; *i; i++) {
     p = in;
-    while ((p = strchr(p, *i)) != 0) {
+    while ((p = strchr(p, *i)) != nullptr) {
       ret = ++p;
     }
   }
@@ -238,11 +238,12 @@ static void default_logger(const char *file, const char *func, int line,
   char *data;
   va_list ap;
   int ret;
+  const auto lvl = (esl_log_level_t)level;
 
-  if (level < 0 || level > 7) {
-    level = 7;
+  if (lvl < ESL_LOG_LEVEL_EMERG || lvl > ESL_LOG_LEVEL_DEBUG) {
+    level = ESL_LOG_LEVEL_DEBUG;
   }
-  if (level > esl_log_level) {
+  if ((esl_log_level_t)level > esl_log_level) {
     return;
   }
 
@@ -272,12 +273,12 @@ ESL_DECLARE(void) esl_global_set_logger(esl_logger_t logger) {
 }
 
 ESL_DECLARE(void) esl_global_set_default_logger(int level) {
-  if (level < 0 || level > 7) {
-    level = 7;
+  if (level < ESL_LOG_LEVEL_EMERG || level > ESL_LOG_LEVEL_DEBUG) {
+    level = ESL_LOG_LEVEL_DEBUG;
   }
 
   esl_log = default_logger;
-  esl_log_level = level;
+  esl_log_level = (esl_log_level_t)level;
 }
 
 ESL_DECLARE(size_t) esl_url_encode(const char *url, char *buf, size_t len) {
@@ -1135,9 +1136,9 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event) {
     }
 
     *((char *)handle->socket_buf +
-      (size_t)ESL_CLAMP((esl_ssize_t)0,
-                        (esl_ssize_t)(sizeof(handle->socket_buf) - 1), rrval)) =
-        '\0';
+      (size_t)esl_clamp_ssize((esl_ssize_t)0,
+                              (esl_ssize_t)(sizeof(handle->socket_buf) - 1),
+                              rrval)) = '\0';
 
     esl_buffer_write(handle->packet_buf, handle->socket_buf, rrval);
   }
@@ -1181,9 +1182,9 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event) {
         }
 
         *((char *)handle->socket_buf +
-          (size_t)ESL_CLAMP((esl_ssize_t)0,
-                            (esl_ssize_t)(sizeof(handle->socket_buf) - 1), r)) =
-            '\0';
+          (size_t)esl_clamp_ssize((esl_ssize_t)0,
+                                  (esl_ssize_t)(sizeof(handle->socket_buf) - 1),
+                                  r)) = '\0';
         esl_buffer_write(handle->packet_buf, handle->socket_buf, r);
       }
 

@@ -54,8 +54,13 @@
 #include "esl/esl_base.h"
 #include "esl_buffer.h"
 
-#define esl_copy_string(_x, _y, _z) snprintf(_x, _z, "%s", _y)
-#define esl_set_string(_x, _y) esl_copy_string(_x, _y, sizeof(_x))
+static inline int esl_copy_string(char *x, const char *y, size_t z) {
+  return snprintf(x, z, "%s", y);
+}
+static inline int esl_set_string_impl(char *x, size_t z, const char *y) {
+  return esl_copy_string(x, y, z);
+}
+#define esl_set_string(_x, _y) esl_set_string_impl((_x), sizeof(_x), (_y))
 #define ESL_VA_NONE "%s", ""
 
 typedef struct esl_event_header esl_event_header_t;
@@ -74,75 +79,87 @@ typedef enum {
   ESL_EVENT_TYPE_JSON
 } esl_event_type_t;
 
-#define ESL_SEQ_ESC "\033["
+static const char ESL_SEQ_ESC[] = "\033[";
 /* Ansi Control character suffixes */
-#define ESL_SEQ_HOME_CHAR 'H'
-#define ESL_SEQ_HOME_CHAR_STR "H"
-#define ESL_SEQ_CLEARLINE_CHAR '1'
-#define ESL_SEQ_CLEARLINE_CHAR_STR "1"
-#define ESL_SEQ_CLEARLINEEND_CHAR "K"
-#define ESL_SEQ_CLEARSCR_CHAR0 '2'
-#define ESL_SEQ_CLEARSCR_CHAR1 'J'
-#define ESL_SEQ_CLEARSCR_CHAR "2J"
-#define ESL_SEQ_DEFAULT_COLOR                                                  \
-  ESL_SEQ_ESC ESL_SEQ_END_COLOR /* Reset to Default fg/bg color */
-#define ESL_SEQ_AND_COLOR ";"   /* To add multiple color definitions */
-#define ESL_SEQ_END_COLOR "m"   /* To end color definitions */
+static constexpr char ESL_SEQ_HOME_CHAR = 'H';
+static const char ESL_SEQ_HOME_CHAR_STR[] = "H";
+static constexpr char ESL_SEQ_CLEARLINE_CHAR = '1';
+static const char ESL_SEQ_CLEARLINE_CHAR_STR[] = "1";
+static const char ESL_SEQ_CLEARLINEEND_CHAR[] = "K";
+static constexpr char ESL_SEQ_CLEARSCR_CHAR0 = '2';
+static constexpr char ESL_SEQ_CLEARSCR_CHAR1 = 'J';
+static const char ESL_SEQ_CLEARSCR_CHAR[] = "2J";
+static const char ESL_SEQ_DEFAULT_COLOR[] =
+    "\033[m"; /* Reset to default fg/bg */
+static const char ESL_SEQ_AND_COLOR[] =
+    ";"; /* To add multiple color definitions */
+static const char ESL_SEQ_END_COLOR[] = "m"; /* To end color definitions */
 /* Foreground colors values */
-#define ESL_SEQ_F_BLACK "30"
-#define ESL_SEQ_F_RED "31"
-#define ESL_SEQ_F_GREEN "32"
-#define ESL_SEQ_F_YELLOW "33"
-#define ESL_SEQ_F_BLUE "34"
-#define ESL_SEQ_F_MAGEN "35"
-#define ESL_SEQ_F_CYAN "36"
-#define ESL_SEQ_F_WHITE "37"
+static const char ESL_SEQ_F_BLACK[] = "30";
+static const char ESL_SEQ_F_RED[] = "31";
+static const char ESL_SEQ_F_GREEN[] = "32";
+static const char ESL_SEQ_F_YELLOW[] = "33";
+static const char ESL_SEQ_F_BLUE[] = "34";
+static const char ESL_SEQ_F_MAGEN[] = "35";
+static const char ESL_SEQ_F_CYAN[] = "36";
+static const char ESL_SEQ_F_WHITE[] = "37";
 /* Background colors values */
-#define ESL_SEQ_B_BLACK "40"
-#define ESL_SEQ_B_RED "41"
-#define ESL_SEQ_B_GREEN "42"
-#define ESL_SEQ_B_YELLOW "43"
-#define ESL_SEQ_B_BLUE "44"
-#define ESL_SEQ_B_MAGEN "45"
-#define ESL_SEQ_B_CYAN "46"
-#define ESL_SEQ_B_WHITE "47"
+static const char ESL_SEQ_B_BLACK[] = "40";
+static const char ESL_SEQ_B_RED[] = "41";
+static const char ESL_SEQ_B_GREEN[] = "42";
+static const char ESL_SEQ_B_YELLOW[] = "43";
+static const char ESL_SEQ_B_BLUE[] = "44";
+static const char ESL_SEQ_B_MAGEN[] = "45";
+static const char ESL_SEQ_B_CYAN[] = "46";
+static const char ESL_SEQ_B_WHITE[] = "47";
 /* Preset escape sequences - Change foreground colors only */
-#define ESL_SEQ_FBLACK ESL_SEQ_ESC ESL_SEQ_F_BLACK ESL_SEQ_END_COLOR
-#define ESL_SEQ_FRED ESL_SEQ_ESC ESL_SEQ_F_RED ESL_SEQ_END_COLOR
-#define ESL_SEQ_FGREEN ESL_SEQ_ESC ESL_SEQ_F_GREEN ESL_SEQ_END_COLOR
-#define ESL_SEQ_FYELLOW ESL_SEQ_ESC ESL_SEQ_F_YELLOW ESL_SEQ_END_COLOR
-#define ESL_SEQ_FBLUE ESL_SEQ_ESC ESL_SEQ_F_BLUE ESL_SEQ_END_COLOR
-#define ESL_SEQ_FMAGEN ESL_SEQ_ESC ESL_SEQ_F_MAGEN ESL_SEQ_END_COLOR
-#define ESL_SEQ_FCYAN ESL_SEQ_ESC ESL_SEQ_F_CYAN ESL_SEQ_END_COLOR
-#define ESL_SEQ_FWHITE ESL_SEQ_ESC ESL_SEQ_F_WHITE ESL_SEQ_END_COLOR
-#define ESL_SEQ_BBLACK ESL_SEQ_ESC ESL_SEQ_B_BLACK ESL_SEQ_END_COLOR
-#define ESL_SEQ_BRED ESL_SEQ_ESC ESL_SEQ_B_RED ESL_SEQ_END_COLOR
-#define ESL_SEQ_BGREEN ESL_SEQ_ESC ESL_SEQ_B_GREEN ESL_SEQ_END_COLOR
-#define ESL_SEQ_BYELLOW ESL_SEQ_ESC ESL_SEQ_B_YELLOW ESL_SEQ_END_COLOR
-#define ESL_SEQ_BBLUE ESL_SEQ_ESC ESL_SEQ_B_BLUE ESL_SEQ_END_COLOR
-#define ESL_SEQ_BMAGEN ESL_SEQ_ESC ESL_SEQ_B_MAGEN ESL_SEQ_END_COLOR
-#define ESL_SEQ_BCYAN ESL_SEQ_ESC ESL_SEQ_B_CYAN ESL_SEQ_END_COLOR
-#define ESL_SEQ_BWHITE ESL_SEQ_ESC ESL_SEQ_B_WHITE ESL_SEQ_END_COLOR
+static const char ESL_SEQ_FBLACK[] = "\033[30m";
+static const char ESL_SEQ_FRED[] = "\033[31m";
+static const char ESL_SEQ_FGREEN[] = "\033[32m";
+static const char ESL_SEQ_FYELLOW[] = "\033[33m";
+static const char ESL_SEQ_FBLUE[] = "\033[34m";
+static const char ESL_SEQ_FMAGEN[] = "\033[35m";
+static const char ESL_SEQ_FCYAN[] = "\033[36m";
+static const char ESL_SEQ_FWHITE[] = "\033[37m";
+static const char ESL_SEQ_BBLACK[] = "\033[40m";
+static const char ESL_SEQ_BRED[] = "\033[41m";
+static const char ESL_SEQ_BGREEN[] = "\033[42m";
+static const char ESL_SEQ_BYELLOW[] = "\033[43m";
+static const char ESL_SEQ_BBLUE[] = "\033[44m";
+static const char ESL_SEQ_BMAGEN[] = "\033[45m";
+static const char ESL_SEQ_BCYAN[] = "\033[46m";
+static const char ESL_SEQ_BWHITE[] = "\033[47m";
 /* Preset escape sequences */
-#define ESL_SEQ_HOME ESL_SEQ_ESC ESL_SEQ_HOME_CHAR_STR
-#define ESL_SEQ_CLEARLINE ESL_SEQ_ESC ESL_SEQ_CLEARLINE_CHAR_STR
-#define ESL_SEQ_CLEARLINEEND ESL_SEQ_ESC ESL_SEQ_CLEARLINEEND_CHAR
-#define ESL_SEQ_CLEARSCR ESL_SEQ_ESC ESL_SEQ_CLEARSCR_CHAR ESL_SEQ_HOME
+static const char ESL_SEQ_HOME[] = "\033[H";
+static const char ESL_SEQ_CLEARLINE[] = "\033[1";
+static const char ESL_SEQ_CLEARLINEEND[] = "\033[K";
+static const char ESL_SEQ_CLEARSCR[] = "\033[2J\033[H";
 
 #define esl_assert(_x) assert(_x)
 
-#define esl_safe_free(_x)                                                      \
-  if (_x)                                                                      \
-    free(_x);                                                                  \
-  _x = nullptr
-#define esl_strlen_zero(s) (!(s) || *(s) == '\0')
-#define esl_strlen_zero_buf(s) (*(s) == '\0')
-#define end_of(_s) *(*(_s) == '\0' ? (_s) : (_s) + strlen(_s) - 1)
+static inline void esl_safe_free_ptr(void **ptr) {
+  if (ptr && *ptr) {
+    free(*ptr);
+    *ptr = nullptr;
+  }
+}
+#define esl_safe_free(_x) esl_safe_free_ptr((void **)&(_x))
 
-#define ESL_SOCK_INVALID -1
+static inline bool esl_strlen_zero(const char *s) {
+  return (s == nullptr) || (*s == '\0');
+}
 
-#define BUF_CHUNK 65536 * 50
-#define BUF_START 65536 * 100
+static inline bool esl_strlen_zero_buf(const char *s) { return (*s == '\0'); }
+
+static inline char esl_end_of(const char *s) {
+  return *(*s == '\0' ? s : s + strlen(s) - 1);
+}
+#define end_of(_s) esl_end_of(_s)
+
+constexpr esl_socket_t ESL_SOCK_INVALID = -1;
+
+constexpr esl_size_t BUF_CHUNK = 65'536 * 50;
+constexpr esl_size_t BUF_START = 65'536 * 100;
 
 /*! \brief A handle that will hold the socket information and
            different events received. */
@@ -184,7 +201,7 @@ typedef struct {
   int destroyed;
 } esl_handle_t;
 
-#define esl_test_flag(obj, flag) ((obj)->flags & flag)
+#define esl_test_flag(obj, flag) ((obj)->flags & (flag))
 #define esl_set_flag(obj, flag) (obj)->flags |= (flag)
 #define esl_clear_flag(obj, flag) (obj)->flags &= ~(flag)
 
@@ -192,15 +209,18 @@ typedef struct {
 #define __FUNCTION__ (const char *)__func__
 #endif
 
+typedef enum {
+  ESL_LOG_LEVEL_EMERG = 0,
+  ESL_LOG_LEVEL_ALERT = 1,
+  ESL_LOG_LEVEL_CRIT = 2,
+  ESL_LOG_LEVEL_ERROR = 3,
+  ESL_LOG_LEVEL_WARNING = 4,
+  ESL_LOG_LEVEL_NOTICE = 5,
+  ESL_LOG_LEVEL_INFO = 6,
+  ESL_LOG_LEVEL_DEBUG = 7
+} esl_log_level_t;
+
 #define ESL_PRE __FILE__, __FUNCTION__, __LINE__
-#define ESL_LOG_LEVEL_DEBUG 7
-#define ESL_LOG_LEVEL_INFO 6
-#define ESL_LOG_LEVEL_NOTICE 5
-#define ESL_LOG_LEVEL_WARNING 4
-#define ESL_LOG_LEVEL_ERROR 3
-#define ESL_LOG_LEVEL_CRIT 2
-#define ESL_LOG_LEVEL_ALERT 1
-#define ESL_LOG_LEVEL_EMERG 0
 
 #define ESL_LOG_DEBUG ESL_PRE, ESL_LOG_LEVEL_DEBUG
 #define ESL_LOG_INFO ESL_PRE, ESL_LOG_LEVEL_INFO
@@ -213,8 +233,8 @@ typedef struct {
 typedef void (*esl_logger_t)(const char *file, const char *func, int line,
                              int level, const char *fmt, ...);
 
-[[nodiscard]] ESL_DECLARE(int) esl_vasprintf(char **ret, const char *fmt,
-                                             va_list ap);
+[[nodiscard]] ESL_DECLARE(int)
+    esl_vasprintf(char **ret, const char *fmt, va_list ap);
 
 ESL_DECLARE_DATA extern esl_logger_t esl_log;
 
@@ -242,8 +262,8 @@ typedef void (*esl_listen_callback_t)(esl_socket_t server_sock,
    your os info)
 */
 [[nodiscard]] ESL_DECLARE(esl_status_t)
-esl_attach_handle(esl_handle_t *handle, esl_socket_t socket,
-                  struct sockaddr_in *addr);
+    esl_attach_handle(esl_handle_t *handle, esl_socket_t socket,
+                      struct sockaddr_in *addr);
 /*!
     \brief Will bind to host and callback when event is received. Used for
    outbound socket.
@@ -253,11 +273,13 @@ esl_attach_handle(esl_handle_t *handle, esl_socket_t socket,
 */
 
 [[nodiscard]] ESL_DECLARE(esl_status_t)
-esl_listen(const char *host, esl_port_t port, esl_listen_callback_t callback,
-           void *user_data, esl_socket_t *server_sockP);
+    esl_listen(const char *host, esl_port_t port,
+               esl_listen_callback_t callback, void *user_data,
+               esl_socket_t *server_sockP);
 [[nodiscard]] ESL_DECLARE(esl_status_t)
-esl_listen_threaded(const char *host, esl_port_t port,
-                    esl_listen_callback_t callback, void *user_data, int max);
+    esl_listen_threaded(const char *host, esl_port_t port,
+                        esl_listen_callback_t callback, void *user_data,
+                        int max);
 /*!
     \brief Executes application with sendmsg to a specific UUID. Used for
    outbound socket.
@@ -267,15 +289,15 @@ esl_listen_threaded(const char *host, esl_port_t port,
     \param uuid Target UUID for the application
 */
 [[nodiscard]] ESL_DECLARE(esl_status_t)
-esl_execute(esl_handle_t *handle, const char *app, const char *arg,
-            const char *uuid);
+    esl_execute(esl_handle_t *handle, const char *app, const char *arg,
+                const char *uuid);
 /*!
     \brief Send an event
     \param handle Handle to which the event should be sent
     \param event Event to be sent
 */
 [[nodiscard]] ESL_DECLARE(esl_status_t)
-esl_sendevent(esl_handle_t *handle, esl_event_t *event);
+    esl_sendevent(esl_handle_t *handle, esl_event_t *event);
 
 /*!
     \brief Send an event as a message to be parsed
@@ -284,7 +306,7 @@ esl_sendevent(esl_handle_t *handle, esl_event_t *event);
         \param uuid a specific uuid if not the default
 */
 [[nodiscard]] ESL_DECLARE(esl_status_t)
-esl_sendmsg(esl_handle_t *handle, esl_event_t *event, const char *uuid);
+    esl_sendmsg(esl_handle_t *handle, esl_event_t *event, const char *uuid);
 
 /*!
     \brief Connect a handle to a host/port with a specific password. This will
@@ -297,10 +319,15 @@ esl_sendmsg(esl_handle_t *handle, esl_event_t *event, const char *uuid);
         \param timeout Connection timeout, in miliseconds
 */
 [[nodiscard]] ESL_DECLARE(esl_status_t)
-esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
-                    const char *user, const char *password, uint32_t timeout);
-#define esl_connect(_handle, _host, _port, _user, _password)                   \
-  esl_connect_timeout(_handle, _host, _port, _user, _password, 0)
+    esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
+                        const char *user, const char *password,
+                        uint32_t timeout);
+
+[[nodiscard]] static inline esl_status_t
+esl_connect(esl_handle_t *handle, const char *host, esl_port_t port,
+            const char *user, const char *password) {
+  return esl_connect_timeout(handle, host, port, user, password, 0);
+}
 
 /*!
     \brief Disconnect a handle
@@ -312,8 +339,8 @@ esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
     \param handle Handle to send the command to
     \param cmd Command to send
 */
-[[nodiscard]] ESL_DECLARE(esl_status_t) esl_send(esl_handle_t *handle,
-                                                 const char *cmd);
+[[nodiscard]] ESL_DECLARE(esl_status_t)
+    esl_send(esl_handle_t *handle, const char *cmd);
 /*!
     \brief Poll the handle's socket until an event is received or a connection
    error occurs
@@ -324,7 +351,7 @@ esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
    received
 */
 [[nodiscard]] ESL_DECLARE(esl_status_t)
-esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event);
+    esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event);
 /*!
     \brief Poll the handle's socket until an event is received, a connection
    error occurs or ms expires
@@ -336,8 +363,8 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event);
    received
 */
 [[nodiscard]] ESL_DECLARE(esl_status_t)
-esl_recv_event_timed(esl_handle_t *handle, uint32_t ms, int check_q,
-                     esl_event_t **save_event);
+    esl_recv_event_timed(esl_handle_t *handle, uint32_t ms, int check_q,
+                         esl_event_t **save_event);
 /*!
     \brief This will send a command and place its response event on
    handle->last_sr_event and handle->last_sr_reply
@@ -345,8 +372,11 @@ esl_recv_event_timed(esl_handle_t *handle, uint32_t ms, int check_q,
     \param cmd Raw command to send
 */
 [[nodiscard]] ESL_DECLARE(esl_status_t)
-esl_send_recv_timed(esl_handle_t *handle, const char *cmd, uint32_t ms);
-#define esl_send_recv(_handle, _cmd) esl_send_recv_timed(_handle, _cmd, 0)
+    esl_send_recv_timed(esl_handle_t *handle, const char *cmd, uint32_t ms);
+[[nodiscard]] static inline esl_status_t esl_send_recv(esl_handle_t *handle,
+                                                       const char *cmd) {
+  return esl_send_recv_timed(handle, cmd, 0);
+}
 /*!
     \brief Applies a filter to received events
     \param handle Handle to apply the filter to
@@ -354,7 +384,7 @@ esl_send_recv_timed(esl_handle_t *handle, const char *cmd, uint32_t ms);
     \param value The value of the header to filter
 */
 [[nodiscard]] ESL_DECLARE(esl_status_t)
-esl_filter(esl_handle_t *handle, const char *header, const char *value);
+    esl_filter(esl_handle_t *handle, const char *header, const char *value);
 /*!
     \brief Will subscribe to events on the server
     \param handle Handle to which we will subscribe to events
@@ -362,14 +392,20 @@ esl_filter(esl_handle_t *handle, const char *header, const char *value);
     \param value Which event to subscribe to
 */
 [[nodiscard]] ESL_DECLARE(esl_status_t)
-esl_events(esl_handle_t *handle, esl_event_type_t etype, const char *value);
+    esl_events(esl_handle_t *handle, esl_event_type_t etype, const char *value);
 
 [[nodiscard]] ESL_DECLARE(int)
-esl_wait_sock(esl_socket_t sock, uint32_t ms, esl_poll_t flags);
+    esl_wait_sock(esl_socket_t sock, uint32_t ms, esl_poll_t flags);
 
 ESL_DECLARE(unsigned int)
 esl_separate_string_string(char *buf, const char *delim, char **array,
                            unsigned int arraylen);
 
-#define esl_recv(_h) esl_recv_event(_h, 0, nullptr)
-#define esl_recv_timed(_h, _ms) esl_recv_event_timed(_h, _ms, 0, nullptr)
+[[nodiscard]] static inline esl_status_t esl_recv(esl_handle_t *handle) {
+  return esl_recv_event(handle, 0, nullptr);
+}
+
+[[nodiscard]] static inline esl_status_t esl_recv_timed(esl_handle_t *handle,
+                                                        uint32_t ms) {
+  return esl_recv_event_timed(handle, ms, 0, nullptr);
+}

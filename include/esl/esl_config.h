@@ -53,6 +53,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 
 #ifndef ESL_DECLARE
@@ -61,14 +62,16 @@
 #define ESL_DECLARE_DATA
 #endif
 
-#define ESL_URL_SEPARATOR "://"
+static const char ESL_URL_SEPARATOR[] = "://";
 
-#define ESL_PATH_SEPARATOR "/"
+static const char ESL_PATH_SEPARATOR[] = "/";
 #ifndef ESL_CONFIG_DIR
-#define ESL_CONFIG_DIR "/etc/openesl"
+static const char ESL_CONFIG_DIR[] = "/etc/openesl";
 #endif
-#define esl_is_file_path(file)                                                 \
-  ((*file == '/') || strstr(file, SWITCH_URL_SEPARATOR))
+[[nodiscard]] static inline bool esl_is_file_path(const char *file) {
+  return (file != nullptr) &&
+         ((*file == '/') || strstr(file, ESL_URL_SEPARATOR) != nullptr);
+}
 
 /*!
   \brief Evaluate the truthfullness of a string expression
@@ -127,7 +130,7 @@ struct esl_config {
   \return 1 (true) on success 0 (false) on failure
 */
 [[nodiscard]] ESL_DECLARE(int)
-esl_config_open_file(esl_config_t *cfg, const char *file_path);
+    esl_config_open_file(esl_config_t *cfg, const char *file_path);
 
 /*!
   \brief Close a previously opened configuration file
@@ -142,7 +145,7 @@ ESL_DECLARE(void) esl_config_close_file(esl_config_t *cfg);
   \param val pointer to aim at the new value
 */
 [[nodiscard]] ESL_DECLARE(int)
-esl_config_next_pair(esl_config_t *cfg, char **var, char **val);
+    esl_config_next_pair(esl_config_t *cfg, char **var, char **val);
 
 /*!
   \brief Retrieve the CAS bits from a configuration string value
@@ -151,6 +154,6 @@ esl_config_next_pair(esl_config_t *cfg, char **var, char **val);
   \param outbits pointer to aim at the CAS bits
 */
 [[nodiscard]] ESL_DECLARE(int)
-esl_config_get_cas_bits(char *strvalue, unsigned char *outbits);
+    esl_config_get_cas_bits(char *strvalue, unsigned char *outbits);
 
 /** @} */

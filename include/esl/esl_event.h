@@ -190,7 +190,7 @@ struct esl_event {
 
 typedef enum { ESL_EF_UNIQ_HEADERS = (1 << 0) } esl_event_flag_t;
 
-#define ESL_EVENT_SUBCLASS_ANY nullptr
+static constexpr const char *ESL_EVENT_SUBCLASS_ANY = nullptr;
 
 /*!
   \brief Create an event

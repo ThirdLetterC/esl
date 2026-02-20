@@ -66,7 +66,7 @@ esl_config_open_file(esl_config_t *cfg, const char *file_path) {
                    ESL_CONFIG_DIR, ESL_PATH_SEPARATOR);
       path = path_buf;
 
-      if ((f = fopen(path, "r")) == 0) {
+      if ((f = fopen(path, "r")) == nullptr) {
         return 0;
       }
 
@@ -122,7 +122,7 @@ esl_config_next_pair(esl_config_t *cfg, char **var, char **val) {
     }
     *var = cfg->buf;
 
-    if (**var == '[' && (end = strchr(*var, ']')) != 0) {
+    if (**var == '[' && (end = strchr(*var, ']')) != nullptr) {
       *end = '\0';
       (*var)++;
       if (**var == '+') {
@@ -135,8 +135,8 @@ esl_config_next_pair(esl_config_t *cfg, char **var, char **val) {
         }
         cfg->catno = 0;
         cfg->lineno = 0;
-        *var = (char *)"";
-        *val = (char *)"";
+        *var = "";
+        *val = "";
         return 1;
       } else {
         esl_copy_string(cfg->category, *var, sizeof(cfg->category));
@@ -156,7 +156,7 @@ esl_config_next_pair(esl_config_t *cfg, char **var, char **val) {
     if ((end = strchr(*var, ';')) && *(end + 1) == *end) {
       *end = '\0';
       end--;
-    } else if ((end = strchr(*var, '\n')) != 0) {
+    } else if ((end = strchr(*var, '\n')) != nullptr) {
       if (*(end - 1) == '\r') {
         end--;
       }
@@ -170,7 +170,7 @@ esl_config_next_pair(esl_config_t *cfg, char **var, char **val) {
     }
     *var = p;
 
-    if ((*val = strchr(*var, '=')) == 0) {
+    if ((*val = strchr(*var, '=')) == nullptr) {
       ret = -1;
       /* log_printf(0, server.log, "Invalid syntax on %s: line %d\n", cfg->path,
        * cfg->lineno); */

@@ -52,8 +52,8 @@ typedef struct esl_buffer esl_buffer_t;
  * \return status
  */
 [[nodiscard]] ESL_DECLARE(esl_status_t)
-esl_buffer_create(esl_buffer_t **buffer, esl_size_t blocksize,
-                  esl_size_t start_len, esl_size_t max_len);
+    esl_buffer_create(esl_buffer_t **buffer, esl_size_t blocksize,
+                      esl_size_t start_len, esl_size_t max_len);
 
 /*! \brief Get the length of a esl_buffer_t
  * \param buffer any buffer of type esl_buffer_t

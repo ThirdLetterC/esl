@@ -223,7 +223,7 @@ esl_event_set_priority(esl_event_t *event, esl_priority_t priority) {
   return ESL_SUCCESS;
 }
 
-#define ESL_HASH_KEY_STRING -1
+constexpr esl_ssize_t ESL_HASH_KEY_STRING = -1;
 
 static unsigned int esl_ci_hashfunc_default(const char *char_key,
                                             esl_ssize_t *klen)
