@@ -4,7 +4,7 @@
 #include "esl/esl.h"
 #include "esl/esl_event.h" // required to inspect esl_event_t fields
 
-int main(void) {
+int main() {
   esl_handle_t handle = {0};
 
   if (esl_connect(&handle, "localhost", 8021, nullptr, "ClueCon") !=

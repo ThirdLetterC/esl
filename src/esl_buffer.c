@@ -53,11 +53,9 @@ esl_buffer_create(esl_buffer_t **buffer, esl_size_t blocksize,
                   esl_size_t start_len, esl_size_t max_len) {
   esl_buffer_t *new_buffer;
 
-  new_buffer = malloc(sizeof(*new_buffer));
+  new_buffer = calloc(1, sizeof(*new_buffer));
 
   if (new_buffer) {
-    memset(new_buffer, 0, sizeof(*new_buffer));
-
     if (!start_len) {
       start_len = 250;
     }
@@ -66,12 +64,11 @@ esl_buffer_create(esl_buffer_t **buffer, esl_size_t blocksize,
       blocksize = start_len;
     }
 
-    new_buffer->data = malloc(start_len);
+    new_buffer->data = calloc(start_len, sizeof(unsigned char));
     if (!new_buffer->data) {
       free(new_buffer);
       return ESL_FAIL;
     }
-    memset(new_buffer->data, 0, start_len);
 
     new_buffer->max_len = max_len;
     new_buffer->datalen = start_len;

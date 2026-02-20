@@ -11,7 +11,7 @@ Pure C client library for the FreeSWITCH Event Socket Library (ESL). It includes
 Compile everything (library + sample) with a single command:
 
 ```bash
-gcc -std=c2x -I src/include src/*.c testclient.c -pthread -o testclient
+gcc -std=c23 -I src/include src/*.c testclient.c -pthread -o testclient
 ```
 
 Run the example while FreeSWITCH is up:

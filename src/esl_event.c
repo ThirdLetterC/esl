@@ -38,14 +38,14 @@
 
 static char *my_dup(const char *s) {
   size_t len = strlen(s) + 1;
-  void *new = malloc(len);
+  void *new = calloc(len, sizeof(char));
   esl_assert(new);
 
   return (char *)memcpy(new, s, len);
 }
 
 #ifndef ALLOC
-#define ALLOC(size) malloc(size)
+#define ALLOC(size) calloc(1, (size))
 #endif
 #ifndef DUP
 #define DUP(str) my_dup(str)
@@ -536,7 +536,7 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
     int i = 0, j = 0;
 
     if (header->value && !header->idx) {
-      m = malloc(sizeof(char *));
+      m = calloc(1, sizeof(char *));
       esl_assert(m);
       m[0] = header->value;
       header->value = nullptr;
@@ -773,13 +773,13 @@ esl_event_serialize(esl_event_t *event, char **str, bool encode) {
 
   dlen = blocksize * 2;
 
-  if (!(buf = malloc(dlen))) {
+  if (!(buf = calloc(dlen, sizeof(char)))) {
     abort();
   }
 
   /* go ahead and give ourselves some space to work with, should save a few
    * reallocs */
-  if (!(encode_buf = malloc(encode_len))) {
+  if (!(encode_buf = calloc(encode_len, sizeof(char)))) {
     abort();
   }
 

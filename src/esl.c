@@ -417,15 +417,13 @@ esl_sendevent(esl_handle_t *handle, esl_event_t *event) {
   esl_log(ESL_LOG_DEBUG, "SEND EVENT\n%s\n", txt);
 
   len = strlen(txt) + 100;
-  event_buf = malloc(len);
+  event_buf = calloc(len, sizeof(char));
   assert(event_buf);
 
   if (!event_buf) {
     free(txt);
     return ESL_FAIL;
   }
-
-  memset(event_buf, 0, len);
 
   snprintf(event_buf, len, "sendevent %s\n%s", esl_event_name(event->event_id),
            txt);
@@ -487,15 +485,13 @@ esl_sendmsg(esl_handle_t *handle, esl_event_t *event, const char *uuid) {
     return ESL_FAIL;
   }
   len = strlen(txt) + 100;
-  cmd_buf = malloc(len);
+  cmd_buf = calloc(len, sizeof(char));
   assert(cmd_buf);
 
   if (!cmd_buf) {
     free(txt);
     return ESL_FAIL;
   }
-
-  memset(cmd_buf, 0, len);
 
   if (uuid) {
     snprintf(cmd_buf, len, "sendmsg %s\n%s", uuid, txt);
