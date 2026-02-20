@@ -119,6 +119,8 @@ const short _esl_C_tolower_[1 + ESL_CTYPE_NUM_CHARS] = {
 
 const short *_esl_tolower_tab_ = _esl_C_tolower_;
 
+static int esl_safe_strcasecmp(const char *s1, const char *s2);
+
 ESL_DECLARE(int) esl_tolower(int c) {
   if ((unsigned int)c > 255)
     return (c);
@@ -202,14 +204,11 @@ static void esl_set_last_error(esl_handle_t *handle, int errnum) {
   }
 }
 
-static void null_logger(const char *file, const char *func, int line, int level,
-                        const char *fmt, ...) {
-  (void)file;
-  (void)func;
-  (void)line;
-  (void)level;
-  (void)fmt;
-
+static void null_logger([[maybe_unused]] const char *file,
+                        [[maybe_unused]] const char *func,
+                        [[maybe_unused]] int line,
+                        [[maybe_unused]] int level,
+                        [[maybe_unused]] const char *fmt, ...) {
   return;
 }
 

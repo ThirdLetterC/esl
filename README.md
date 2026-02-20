@@ -1,6 +1,6 @@
 # ESL Client Library
 
-Pure C client library for the FreeSWITCH Event Socket Library (ESL). It includes the core socket/event handling code under `src/`, public headers in `src/include/`, and a small sample program in `testclient.c` that connects to a running FreeSWITCH instance and prints the output of `api status`.
+Pure C client library for the FreeSWITCH Event Socket Library (ESL). It includes the core socket/event handling code under `src/`, public headers under `include/esl/`, and a sample client in `examples/testclient.c` that connects to a running FreeSWITCH instance and prints the output of `api status`.
 
 ## Requirements
 - FreeSWITCH with the event socket listener enabled (default: `localhost:8021`, password `ClueCon`) to run the sample client.
@@ -8,16 +8,22 @@ Pure C client library for the FreeSWITCH Event Socket Library (ESL). It includes
 - POSIX: `pthread` is used for threading.
 
 ## Build quickstart
-Compile everything (library + sample) with a single command:
+Build everything (library + sample) with Zig:
 
 ```bash
-gcc -std=c23 -I src/include src/*.c testclient.c -pthread -o testclient
+zig build
+```
+
+Enable sanitizer instrumentation when needed:
+
+```bash
+zig build -Dsanitize=true
 ```
 
 Run the example while FreeSWITCH is up:
 
 ```bash
-./testclient
+./zig-out/bin/testclient
 ```
 
 `testclient` connects to `localhost:8021`, sends `api status`, and prints the reply body if present (otherwise the raw reply line).
@@ -30,5 +36,5 @@ Run the example while FreeSWITCH is up:
 - `esl_json_*` helpers wrap Parson for lightweight JSON parsing/serialization when dealing with `JSON` event payloads.
 
 ## Notes
-- Public headers live in `src/include/`; keep them on your include path when integrating.
+- Public headers live in `include/`; keep them on your include path when integrating.
 - The sources are licensed under the BSD-style terms found at the top of each file.

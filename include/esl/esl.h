@@ -371,5 +371,3 @@ esl_separate_string_string(char *buf, const char *delim, char **array,
 
 #define esl_recv(_h) esl_recv_event(_h, 0, nullptr)
 #define esl_recv_timed(_h, _ms) esl_recv_event_timed(_h, _ms, 0, nullptr)
-
-static int esl_safe_strcasecmp(const char *s1, const char *s2);

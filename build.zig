@@ -3,6 +3,11 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const enable_sanitize = b.option(
+        bool,
+        "sanitize",
+        "Enable Zig C sanitizers (useful for debug validation)",
+    ) orelse false;
 
     if (target.result.os.tag == .windows) {
         std.debug.panic("Windows is not a supported target.", .{});
@@ -12,6 +17,10 @@ pub fn build(b: *std.Build) void {
         "-std=c23",
         "-D_POSIX_C_SOURCE=200809L",
         "-D_XOPEN_SOURCE=700",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
     };
 
     const esl_sources = &[_][]const u8{
@@ -27,6 +36,8 @@ pub fn build(b: *std.Build) void {
     const esl_module = b.createModule(.{
         .target = target,
         .optimize = optimize,
+        .sanitize_c = if (enable_sanitize) .full else null,
+        .omit_frame_pointer = if (enable_sanitize) false else null,
     });
     esl_module.addIncludePath(b.path("include"));
     esl_module.addCSourceFiles(.{
@@ -47,6 +58,8 @@ pub fn build(b: *std.Build) void {
     const client_module = b.createModule(.{
         .target = target,
         .optimize = optimize,
+        .sanitize_c = if (enable_sanitize) .full else null,
+        .omit_frame_pointer = if (enable_sanitize) false else null,
     });
     client_module.addIncludePath(b.path("include"));
     client_module.addCSourceFiles(.{

@@ -429,10 +429,9 @@ static bool is_decimal(const char *string, size_t length) {
   return true;
 }
 
-static unsigned long hash_string(const char *string, size_t n) {
+static unsigned long hash_string([[maybe_unused]] const char *string,
+                                 [[maybe_unused]] size_t n) {
 #ifdef PARSON_FORCE_HASH_COLLISIONS
-  (void)string;
-  (void)n;
   return 0;
 #else
   unsigned long hash = 5381;
