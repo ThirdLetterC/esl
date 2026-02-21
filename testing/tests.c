@@ -33,6 +33,32 @@
   return written == 4 && strcmp(buf, "abcd") == 0;
 }
 
+[[nodiscard]] static bool run_test_url_decode_invalid_sequences() {
+  char malformed_percent[] = "%";
+  char malformed_hex[] = "%2G";
+  char mixed[] = "A%2GB%41";
+
+  if (esl_url_decode(nullptr) != nullptr) {
+    return false;
+  }
+
+  if (esl_url_decode(malformed_percent) != malformed_percent ||
+      strcmp(malformed_percent, "%") != 0) {
+    return false;
+  }
+
+  if (esl_url_decode(malformed_hex) != malformed_hex ||
+      strcmp(malformed_hex, "%2G") != 0) {
+    return false;
+  }
+
+  if (esl_url_decode(mixed) != mixed || strcmp(mixed, "A%2GBA") != 0) {
+    return false;
+  }
+
+  return true;
+}
+
 [[nodiscard]] static bool run_test_stristr_case_insensitive() {
   const char *found = esl_stristr("bEtA", "AlphaBetaGamma");
 
@@ -127,6 +153,15 @@ done:
 done:
   esl_buffer_destroy(&buffer);
   return ok && buffer == nullptr;
+}
+
+[[nodiscard]] static bool run_test_buffer_destroy_null_safe() {
+  esl_buffer_t *buffer = nullptr;
+
+  esl_buffer_destroy(nullptr);
+  esl_buffer_destroy(&buffer);
+
+  return buffer == nullptr;
 }
 
 [[nodiscard]] static bool run_test_json_helpers() {
@@ -305,6 +340,35 @@ done:
   return ok;
 }
 
+[[nodiscard]] static bool run_test_event_validation_guards() {
+  esl_event_t *event = nullptr;
+  esl_event_t *dup = nullptr;
+
+  if (esl_event_add_header(nullptr, ESL_STACK_BOTTOM, "X", "%s", "Y") !=
+      ESL_FAIL) {
+    return false;
+  }
+  if (esl_event_add_header(nullptr, ESL_STACK_BOTTOM, "X", nullptr) !=
+      ESL_FAIL) {
+    return false;
+  }
+
+  if (esl_event_dup(nullptr, nullptr) != ESL_FAIL) {
+    return false;
+  }
+  if (esl_event_dup(&dup, nullptr) != ESL_FAIL) {
+    return false;
+  }
+  if (dup != nullptr) {
+    return false;
+  }
+
+  esl_event_merge(nullptr, nullptr);
+  esl_event_merge(nullptr, event);
+
+  return true;
+}
+
 [[nodiscard]] static bool run_test_config_file_parse() {
   char path[] = "/tmp/esl_cfg_XXXXXX";
   static const char cfg_text[] =
@@ -439,13 +503,16 @@ int main() {
 
   TEST(url_encode_decode);
   TEST(url_encode_truncation);
+  TEST(url_decode_invalid_sequences);
   TEST(stristr_case_insensitive);
   TEST(snprintf_bounds);
   TEST(buffer_write_read);
   TEST(buffer_max_len_enforced);
+  TEST(buffer_destroy_null_safe);
   TEST(json_helpers);
   TEST(event_create_add_serialize);
   TEST(event_json_roundtrip);
+  TEST(event_validation_guards);
   TEST(config_file_parse);
   TEST(config_cas_bits);
   TEST(threadmutex_lifecycle);

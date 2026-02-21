@@ -813,8 +813,12 @@ ESL_DECLARE(esl_status_t)
 esl_event_add_header(esl_event_t *event, esl_stack_t stack,
                      const char *header_name, const char *fmt, ...) {
   int ret = 0;
-  char *data;
+  char *data = nullptr;
   va_list ap;
+
+  if (event == nullptr || header_name == nullptr || fmt == nullptr) {
+    return ESL_FAIL;
+  }
 
   va_start(ap, fmt);
   ret = esl_vasprintf(&data, fmt, ap);
@@ -926,7 +930,9 @@ ESL_DECLARE(void) esl_event_destroy(esl_event_t **event) {
 ESL_DECLARE(void) esl_event_merge(esl_event_t *event, esl_event_t *tomerge) {
   esl_event_header_t *hp;
 
-  esl_assert(tomerge && event);
+  if (event == nullptr || tomerge == nullptr) {
+    return;
+  }
 
   for (hp = tomerge->headers; hp; hp = hp->next) {
     if (hp->idx) {
@@ -945,6 +951,10 @@ ESL_DECLARE(void) esl_event_merge(esl_event_t *event, esl_event_t *tomerge) {
 ESL_DECLARE(esl_status_t)
 esl_event_dup(esl_event_t **event, esl_event_t *todup) {
   esl_event_header_t *hp;
+
+  if (event == nullptr || todup == nullptr) {
+    return ESL_FAIL;
+  }
 
   if (esl_event_create_subclass(event, ESL_EVENT_CLONE, todup->subclass_name) !=
       ESL_SUCCESS) {

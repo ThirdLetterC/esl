@@ -323,20 +323,69 @@ ESL_DECLARE(size_t) esl_url_encode(const char *url, char *buf, size_t len) {
   return x;
 }
 
-ESL_DECLARE(char *) esl_url_decode(char *s) {
-  char *o;
-  unsigned int tmp;
-
-  for (o = s; *s; s++, o++) {
-    if (*s == '%' && strlen(s) > 2 && sscanf(s + 1, "%2x", &tmp) == 1) {
-      *o = (char)tmp;
-      s += 2;
-    } else {
-      *o = *s;
-    }
+[[nodiscard]] static bool esl_hex_nibble(char c, unsigned char *out) {
+  if (out == nullptr) {
+    return false;
   }
+
+  if (c >= '0' && c <= '9') {
+    *out = (unsigned char)(c - '0');
+    return true;
+  }
+  if (c >= 'a' && c <= 'f') {
+    *out = (unsigned char)(10 + (c - 'a'));
+    return true;
+  }
+  if (c >= 'A' && c <= 'F') {
+    *out = (unsigned char)(10 + (c - 'A'));
+    return true;
+  }
+
+  return false;
+}
+
+[[nodiscard]] static bool esl_hex_byte_decode(char hi, char lo,
+                                              unsigned char *out) {
+  unsigned char hi_nibble = 0;
+  unsigned char lo_nibble = 0;
+
+  if (!esl_hex_nibble(hi, &hi_nibble) || !esl_hex_nibble(lo, &lo_nibble)) {
+    return false;
+  }
+
+  if (out == nullptr) {
+    return false;
+  }
+  *out = (unsigned char)((hi_nibble << 4) | lo_nibble);
+  return true;
+}
+
+ESL_DECLARE(char *) esl_url_decode(char *s) {
+  char *o = nullptr;
+  char *start = nullptr;
+
+  if (s == nullptr) {
+    return nullptr;
+  }
+
+  start = s;
+  o = s;
+
+  while (*s != '\0') {
+    unsigned char decoded = 0;
+
+    if (*s == '%' && s[1] != '\0' && s[2] != '\0' &&
+        esl_hex_byte_decode(s[1], s[2], &decoded)) {
+      *o++ = (char)decoded;
+      s += 3;
+      continue;
+    }
+
+    *o++ = *s++;
+  }
+
   *o = '\0';
-  return s;
+  return start;
 }
 
 static int sock_setup(esl_handle_t *handle) {
@@ -347,7 +396,11 @@ static int sock_setup(esl_handle_t *handle) {
 
   {
     int x = 1;
-    setsockopt(handle->sock, IPPROTO_TCP, TCP_NODELAY, &x, sizeof(x));
+    if (setsockopt(handle->sock, IPPROTO_TCP, TCP_NODELAY, &x, sizeof(x)) !=
+        0) {
+      esl_set_last_error(handle, errno);
+      return ESL_FAIL;
+    }
   }
 
   return ESL_SUCCESS;
@@ -454,26 +507,42 @@ esl_execute(esl_handle_t *handle, const char *app, const char *arg,
   const char *el_buf = "event-lock: true\n";
   const char *bl_buf = "async: true\n";
   char send_buf[5120] = "";
+  int written = 0;
 
   if (!handle || !handle->connected || handle->sock == ESL_SOCK_INVALID) {
     return ESL_FAIL;
   }
 
   if (uuid) {
-    snprintf(cmd_buf, sizeof(cmd_buf), "sendmsg %s", uuid);
+    written = esl_snprintf(cmd_buf, sizeof(cmd_buf), "sendmsg %s", uuid);
+    if (written < 0 || (size_t)written >= sizeof(cmd_buf)) {
+      return ESL_FAIL;
+    }
   }
 
   if (app) {
-    snprintf(app_buf, sizeof(app_buf), "execute-app-name: %s\n", app);
+    written =
+        esl_snprintf(app_buf, sizeof(app_buf), "execute-app-name: %s\n", app);
+    if (written < 0 || (size_t)written >= sizeof(app_buf)) {
+      return ESL_FAIL;
+    }
   }
 
   if (arg) {
-    snprintf(arg_buf, sizeof(arg_buf), "execute-app-arg: %s\n", arg);
+    written =
+        esl_snprintf(arg_buf, sizeof(arg_buf), "execute-app-arg: %s\n", arg);
+    if (written < 0 || (size_t)written >= sizeof(arg_buf)) {
+      return ESL_FAIL;
+    }
   }
 
-  snprintf(send_buf, sizeof(send_buf), "%s\ncall-command: execute\n%s%s%s%s\n",
-           cmd_buf, app_buf, arg_buf, handle->event_lock ? el_buf : "",
-           handle->async_execute ? bl_buf : "");
+  written = esl_snprintf(send_buf, sizeof(send_buf),
+                         "%s\ncall-command: execute\n%s%s%s%s\n", cmd_buf,
+                         app_buf, arg_buf, handle->event_lock ? el_buf : "",
+                         handle->async_execute ? bl_buf : "");
+  if (written < 0 || (size_t)written >= sizeof(send_buf)) {
+    return ESL_FAIL;
+  }
 
   return esl_send_recv(handle, send_buf);
 }
@@ -524,13 +593,18 @@ esl_sendmsg(esl_handle_t *handle, esl_event_t *event, const char *uuid) {
 ESL_DECLARE(esl_status_t)
 esl_filter(esl_handle_t *handle, const char *header, const char *value) {
   char send_buf[1024] = "";
+  int written = 0;
 
   if (!handle || !handle->connected || handle->sock == ESL_SOCK_INVALID ||
       header == nullptr || value == nullptr) {
     return ESL_FAIL;
   }
 
-  snprintf(send_buf, sizeof(send_buf), "filter %s %s\n\n", header, value);
+  written = esl_snprintf(send_buf, sizeof(send_buf), "filter %s %s\n\n", header,
+                         value);
+  if (written < 0 || (size_t)written >= sizeof(send_buf)) {
+    return ESL_FAIL;
+  }
 
   return esl_send_recv(handle, send_buf);
 }
@@ -539,6 +613,7 @@ ESL_DECLARE(esl_status_t)
 esl_events(esl_handle_t *handle, esl_event_type_t etype, const char *value) {
   char send_buf[1024] = "";
   const char *type = "plain";
+  int written = 0;
 
   if (!handle || !handle->connected || handle->sock == ESL_SOCK_INVALID ||
       value == nullptr) {
@@ -551,7 +626,11 @@ esl_events(esl_handle_t *handle, esl_event_type_t etype, const char *value) {
     type = "json";
   }
 
-  snprintf(send_buf, sizeof(send_buf), "event %s %s\n\n", type, value);
+  written =
+      esl_snprintf(send_buf, sizeof(send_buf), "event %s %s\n\n", type, value);
+  if (written < 0 || (size_t)written >= sizeof(send_buf)) {
+    return ESL_FAIL;
+  }
 
   return esl_send_recv(handle, send_buf);
 }
@@ -600,6 +679,10 @@ esl_listen([[maybe_unused]] const char *host, esl_port_t port,
   esl_status_t status = ESL_SUCCESS;
 
   if ((server_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+    return ESL_FAIL;
+  }
+  if (callback == nullptr) {
+    closesocket(server_sock);
     return ESL_FAIL;
   }
 
@@ -668,6 +751,10 @@ esl_listen_threaded([[maybe_unused]] const char *host, esl_port_t port,
   struct thread_handler *handler = nullptr;
 
   if ((server_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+    return ESL_FAIL;
+  }
+  if (callback == nullptr) {
+    closesocket(server_sock);
     return ESL_FAIL;
   }
 
@@ -793,6 +880,8 @@ esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
   struct sockaddr_in6 *sockaddr_in6;
   socklen_t socklen;
   int fd_flags = 0;
+  int sock_error = 0;
+  socklen_t sock_error_len = sizeof(sock_error);
 
   if (handle == nullptr || host == nullptr || password == nullptr) {
     return ESL_FAIL;
@@ -869,10 +958,34 @@ esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
   if (timeout) {
     int r;
 
-    r = esl_wait_sock(handle->sock, timeout, ESL_POLL_WRITE);
+    if (rval < 0 && errno != EINPROGRESS && errno != EWOULDBLOCK) {
+      snprintf(handle->err, sizeof(handle->err), "Socket Connection Error");
+      goto fail;
+    }
+
+    r = esl_wait_sock(handle->sock, timeout, ESL_POLL_WRITE | ESL_POLL_ERROR);
 
     if (r <= 0) {
       snprintf(handle->err, sizeof(handle->err), "Connection timed out");
+      goto fail;
+    }
+
+    if (r & ESL_POLL_ERROR) {
+      esl_set_last_error(handle, errno);
+      snprintf(handle->err, sizeof(handle->err), "Socket Connection Error");
+      goto fail;
+    }
+
+    if (getsockopt(handle->sock, SOL_SOCKET, SO_ERROR, &sock_error,
+                   &sock_error_len) != 0) {
+      esl_set_last_error(handle, errno);
+      snprintf(handle->err, sizeof(handle->err), "Socket Connection Error");
+      goto fail;
+    }
+
+    if (sock_error != 0) {
+      esl_set_last_error(handle, sock_error);
+      snprintf(handle->err, sizeof(handle->err), "Socket Connection Error");
       goto fail;
     }
 
@@ -895,7 +1008,10 @@ esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
     goto fail;
   }
 
-  sock_setup(handle);
+  if (sock_setup(handle) != ESL_SUCCESS) {
+    snprintf(handle->err, sizeof(handle->err), "Socket Error");
+    goto fail;
+  }
 
   handle->connected = 1;
 
@@ -1120,9 +1236,18 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event) {
 
   while (!revent && handle->connected) {
     esl_size_t len1;
+    const esl_size_t available_packets =
+        esl_buffer_packet_count(handle->packet_buf);
 
-    if ((len1 = esl_buffer_read_packet(handle->packet_buf, handle->socket_buf,
-                                       sizeof(handle->socket_buf) - 1))) {
+    len1 = esl_buffer_read_packet(handle->packet_buf, handle->socket_buf,
+                                  sizeof(handle->socket_buf) - 1);
+    if (len1 == 0 && available_packets > 0) {
+      esl_set_last_error(handle, EMSGSIZE);
+      esl_snprintf(handle->err, sizeof(handle->err), "Event header too large");
+      goto fail;
+    }
+
+    if (len1 > 0) {
       char *data = (char *)handle->socket_buf;
       char *p, *e;
 
@@ -1458,6 +1583,12 @@ ESL_DECLARE(esl_status_t) esl_send(esl_handle_t *handle, const char *cmd) {
       continue;
     }
 
+    if (just_sent == 0) {
+      handle->connected = 0;
+      esl_set_last_error(handle, EPIPE);
+      return ESL_FAIL;
+    }
+
     handle->connected = 0;
     esl_set_last_error(handle, errno);
     return ESL_FAIL;
@@ -1486,6 +1617,12 @@ ESL_DECLARE(esl_status_t) esl_send(esl_handle_t *handle, const char *cmd) {
           }
         }
         continue;
+      }
+
+      if (just_sent == 0) {
+        handle->connected = 0;
+        esl_set_last_error(handle, EPIPE);
+        return ESL_FAIL;
       }
 
       handle->connected = 0;

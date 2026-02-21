@@ -55,6 +55,13 @@
 #include "esl_buffer.h"
 
 static inline int esl_copy_string(char *x, const char *y, size_t z) {
+  if (x == nullptr || z == 0) {
+    return -1;
+  }
+  if (y == nullptr) {
+    x[0] = '\0';
+    return 0;
+  }
   return snprintf(x, z, "%s", y);
 }
 static inline int esl_set_string_impl(char *x, size_t z, const char *y) {

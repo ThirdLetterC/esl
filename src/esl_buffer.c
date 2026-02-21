@@ -158,12 +158,18 @@ esl_buffer_toss(esl_buffer_t *buffer, esl_size_t datalen) {
 }
 
 ESL_DECLARE(void) esl_buffer_set_loops(esl_buffer_t *buffer, int loops) {
+  if (buffer == nullptr) {
+    return;
+  }
   buffer->loops = loops;
 }
 
 ESL_DECLARE(esl_size_t)
 esl_buffer_read_loop(esl_buffer_t *buffer, void *data, esl_size_t datalen) {
   esl_size_t len;
+  if (buffer == nullptr || data == nullptr || datalen == 0) {
+    return 0;
+  }
   if ((len = esl_buffer_read(buffer, data, datalen)) < datalen) {
     if (buffer->loops == 0) {
       return len;
@@ -377,6 +383,10 @@ esl_buffer_zwrite(esl_buffer_t *buffer, const void *data, esl_size_t datalen) {
 }
 
 ESL_DECLARE(void) esl_buffer_destroy(esl_buffer_t **buffer) {
+  if (buffer == nullptr) {
+    return;
+  }
+
   if (*buffer) {
     free((*buffer)->data);
     (*buffer)->data = nullptr;
