@@ -409,7 +409,7 @@ esl_sendevent(esl_handle_t *handle, esl_event_t *event) {
   esl_status_t status = ESL_FAIL;
   size_t len = 0;
 
-  if (!handle->connected || !event) {
+  if (handle == nullptr || !handle->connected || !event) {
     return ESL_FAIL;
   }
 
@@ -420,9 +420,12 @@ esl_sendevent(esl_handle_t *handle, esl_event_t *event) {
 
   esl_log(ESL_LOG_DEBUG, "SEND EVENT\n%s\n", txt);
 
+  if (strlen(txt) > (SIZE_MAX - 100)) {
+    free(txt);
+    return ESL_FAIL;
+  }
   len = strlen(txt) + 100;
   event_buf = calloc(len, sizeof(char));
-  assert(event_buf);
 
   if (!event_buf) {
     free(txt);
@@ -488,9 +491,12 @@ esl_sendmsg(esl_handle_t *handle, esl_event_t *event, const char *uuid) {
       txt == nullptr) {
     return ESL_FAIL;
   }
+  if (strlen(txt) > (SIZE_MAX - 100)) {
+    free(txt);
+    return ESL_FAIL;
+  }
   len = strlen(txt) + 100;
   cmd_buf = calloc(len, sizeof(char));
-  assert(cmd_buf);
 
   if (!cmd_buf) {
     free(txt);
@@ -517,7 +523,8 @@ ESL_DECLARE(esl_status_t)
 esl_filter(esl_handle_t *handle, const char *header, const char *value) {
   char send_buf[1024] = "";
 
-  if (!handle || !handle->connected || handle->sock == ESL_SOCK_INVALID) {
+  if (!handle || !handle->connected || handle->sock == ESL_SOCK_INVALID ||
+      header == nullptr || value == nullptr) {
     return ESL_FAIL;
   }
 
@@ -531,7 +538,8 @@ esl_events(esl_handle_t *handle, esl_event_type_t etype, const char *value) {
   char send_buf[1024] = "";
   const char *type = "plain";
 
-  if (!handle || !handle->connected || handle->sock == ESL_SOCK_INVALID) {
+  if (!handle || !handle->connected || handle->sock == ESL_SOCK_INVALID ||
+      value == nullptr) {
     return ESL_FAIL;
   }
 
@@ -1100,10 +1108,15 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event) {
 
       *(data + len1) = '\0';
 
-      esl_event_create(&revent, ESL_EVENT_CLONE);
+      if (esl_event_create(&revent, ESL_EVENT_CLONE) != ESL_SUCCESS ||
+          revent == nullptr) {
+        goto fail;
+      }
       revent->event_id = ESL_EVENT_SOCKET_DATA;
-      esl_event_add_header_string(revent, ESL_STACK_BOTTOM, "Event-Name",
-                                  "SOCKET_DATA");
+      if (esl_event_add_header_string(revent, ESL_STACK_BOTTOM, "Event-Name",
+                                      "SOCKET_DATA") != ESL_SUCCESS) {
+        goto fail;
+      }
 
       p = data;
 
@@ -1124,10 +1137,14 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event) {
             esl_url_decode(hval);
             esl_log(ESL_LOG_DEBUG, "RECV HEADER [%s] = [%s]\n", hname, hval);
             if (!strncmp(hval, "ARRAY::", 7)) {
-              esl_event_add_array(revent, hname, hval);
+              if (esl_event_add_array(revent, hname, hval) != 0) {
+                goto fail;
+              }
             } else {
-              esl_event_add_header_string(revent, ESL_STACK_BOTTOM, hname,
-                                          hval);
+              if (esl_event_add_header_string(revent, ESL_STACK_BOTTOM, hname,
+                                              hval) != ESL_SUCCESS) {
+                goto fail;
+              }
             }
 
             p = e;
@@ -1155,7 +1172,10 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event) {
                               (esl_ssize_t)(sizeof(handle->socket_buf) - 1),
                               rrval)) = '\0';
 
-    esl_buffer_write(handle->packet_buf, handle->socket_buf, rrval);
+    if (esl_buffer_write(handle->packet_buf, handle->socket_buf,
+                         (esl_size_t)rrval) == 0) {
+      goto fail;
+    }
   }
 
   if (!revent) {
@@ -1164,12 +1184,17 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event) {
 
   if ((cl = esl_event_get_header(revent, "content-length"))) {
     esl_ssize_t sofar = 0;
+    char *endptr = nullptr;
+    unsigned long long parsed_len = 0;
 
-    len = atol(cl);
-    if (len < 0 || (esl_size_t)len > ESL_MAX_CONTENT_LENGTH) {
+    errno = 0;
+    parsed_len = strtoull(cl, &endptr, 10);
+    if (errno != 0 || endptr == cl || (endptr != nullptr && *endptr != '\0') ||
+        parsed_len > (unsigned long long)ESL_MAX_CONTENT_LENGTH) {
       esl_event_destroy(&revent);
       goto fail;
     }
+    len = (esl_ssize_t)parsed_len;
 
     auto body = (char *)calloc((size_t)len + 1, sizeof(char));
     if (body == nullptr) {
@@ -1200,7 +1225,11 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event) {
           (size_t)esl_clamp_ssize((esl_ssize_t)0,
                                   (esl_ssize_t)(sizeof(handle->socket_buf) - 1),
                                   r)) = '\0';
-        esl_buffer_write(handle->packet_buf, handle->socket_buf, r);
+        if (esl_buffer_write(handle->packet_buf, handle->socket_buf,
+                             (esl_size_t)r) == 0) {
+          free(body);
+          goto fail;
+        }
       }
 
     } while (sofar < len);
@@ -1270,10 +1299,18 @@ parse_event:
               }
 
               if (!strncmp(hval, "ARRAY::", 7)) {
-                esl_event_add_array(handle->last_ievent, hname, hval);
+                if (esl_event_add_array(handle->last_ievent, hname, hval) !=
+                    0) {
+                  esl_event_safe_destroy(&handle->last_ievent);
+                  break;
+                }
               } else {
-                esl_event_add_header_string(handle->last_ievent,
-                                            ESL_STACK_BOTTOM, hname, hval);
+                if (esl_event_add_header_string(handle->last_ievent,
+                                                ESL_STACK_BOTTOM, hname,
+                                                hval) != ESL_SUCCESS) {
+                  esl_event_safe_destroy(&handle->last_ievent);
+                  break;
+                }
               }
             }
 
@@ -1287,7 +1324,9 @@ parse_event:
 
           if (beg &&
               esl_event_get_header(handle->last_ievent, "content-length")) {
-            handle->last_ievent->body = strdup(beg);
+            if (esl_event_set_body(handle->last_ievent, beg) != ESL_SUCCESS) {
+              esl_event_safe_destroy(&handle->last_ievent);
+            }
           }
         }
 

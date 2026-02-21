@@ -25,6 +25,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -59,6 +60,17 @@ static constexpr double json_number_epsilon = 0.000'001;
 static constexpr size_t object_invalid_ix = SIZE_MAX;
 
 static inline size_t max_size(size_t a, size_t b) { return a > b ? a : b; }
+
+static inline bool json_checked_int_add(int *value, size_t add) {
+  if (value == nullptr || *value < 0) {
+    return false;
+  }
+  if (add > (size_t)(INT_MAX - *value)) {
+    return false;
+  }
+  *value += (int)add;
+  return true;
+}
 
 static inline void skip_char(const char **str) { ++(*str); }
 
@@ -475,6 +487,9 @@ static JSON_Status json_object_init(JSON_Object *object, size_t capacity) {
 
   object->count = 0;
   object->cell_capacity = capacity;
+  if (capacity > (SIZE_MAX / 7U)) {
+    return JSONFailure;
+  }
   object->item_capacity = (capacity * 7U) / 10U;
 
   if (capacity == 0) {
@@ -544,7 +559,11 @@ static JSON_Status json_object_grow_and_rehash(JSON_Object *object) {
   char *key = nullptr;
   JSON_Value *value = nullptr;
   unsigned int i = 0;
-  size_t new_capacity = max_size(object->cell_capacity * 2, starting_capacity);
+  if (object->cell_capacity > (SIZE_MAX / 2U)) {
+    return JSONFailure;
+  }
+  size_t new_capacity =
+      max_size(object->cell_capacity * 2U, starting_capacity);
   JSON_Status res = json_object_init(&new_object, new_capacity);
   if (res != JSONSuccess) {
     return JSONFailure;
@@ -672,7 +691,7 @@ static JSON_Status json_object_remove_internal(JSON_Object *object,
   size_t k = 0;
   JSON_Value *val = nullptr;
 
-  if (object == nullptr) {
+  if (object == nullptr || name == nullptr) {
     return JSONFailure;
   }
 
@@ -724,6 +743,9 @@ static JSON_Status json_object_dotremove_internal(JSON_Object *object,
                                                   bool free_value) {
   JSON_Value *temp_value = nullptr;
   JSON_Object *temp_object = nullptr;
+  if (object == nullptr || name == nullptr) {
+    return JSONFailure;
+  }
   const char *dot_pos = strchr(name, '.');
   if (dot_pos == nullptr) {
     return json_object_remove_internal(object, name, free_value);
@@ -752,8 +774,14 @@ static void json_object_free(JSON_Object *object) {
 }
 
 static JSON_Status json_array_add(JSON_Array *array, JSON_Value *value) {
+  if (array == nullptr || value == nullptr) {
+    return JSONFailure;
+  }
   if (array->count >= array->capacity) {
-    size_t new_capacity = max_size(array->capacity * 2, starting_capacity);
+    if (array->capacity > (SIZE_MAX / 2U)) {
+      return JSONFailure;
+    }
+    size_t new_capacity = max_size(array->capacity * 2U, starting_capacity);
     if (json_array_resize(array, new_capacity) != JSONSuccess) {
       return JSONFailure;
     }
@@ -766,7 +794,7 @@ static JSON_Status json_array_add(JSON_Array *array, JSON_Value *value) {
 
 static JSON_Status json_array_resize(JSON_Array *array, size_t new_capacity) {
   JSON_Value **new_items = nullptr;
-  if (new_capacity == 0) {
+  if (array == nullptr || new_capacity == 0 || new_capacity < array->count) {
     return JSONFailure;
   }
   new_items = (JSON_Value **)parson_calloc(new_capacity, sizeof(JSON_Value *));
@@ -1158,6 +1186,9 @@ error:
   double number = 0;
   errno = 0;
   number = strtod(*string, &end);
+  if (end == *string) {
+    return nullptr;
+  }
   if (errno == ERANGE && (number <= -HUGE_VAL || number >= HUGE_VAL)) {
     return nullptr;
   }
@@ -1187,12 +1218,17 @@ typedef struct serialization_buffer {
 static inline void append_literal(serialization_buffer *buffer,
                                   const char *literal) {
   const size_t written = strlen(literal);
+  if (buffer->written_total < 0) {
+    return;
+  }
   if (buffer->cursor != nullptr) {
     memcpy(buffer->cursor, literal, written);
     buffer->cursor[written] = '\0';
     buffer->cursor += written;
   }
-  buffer->written_total += (int)written;
+  if (!json_checked_int_add(&buffer->written_total, written)) {
+    buffer->written_total = -1;
+  }
 }
 
 static inline void append_indent(serialization_buffer *buffer, int level) {
@@ -1238,7 +1274,10 @@ static int json_serialize_to_buffer_r(const JSON_Value *value, char *buf,
       if (out.cursor != nullptr) {
         out.cursor += written;
       }
-      out.written_total += written;
+      if (written < 0 ||
+          !json_checked_int_add(&out.written_total, (size_t)written)) {
+        return -1;
+      }
       if (i < (count - 1)) {
         append_literal(&out, ",");
       }
@@ -1274,7 +1313,10 @@ static int json_serialize_to_buffer_r(const JSON_Value *value, char *buf,
       if (out.cursor != nullptr) {
         out.cursor += written;
       }
-      out.written_total += written;
+      if (written < 0 ||
+          !json_checked_int_add(&out.written_total, (size_t)written)) {
+        return -1;
+      }
       append_literal(&out, ":");
       if (is_pretty) {
         append_literal(&out, " ");
@@ -1314,7 +1356,10 @@ static int json_serialize_to_buffer_r(const JSON_Value *value, char *buf,
     if (out.cursor != nullptr) {
       out.cursor += written;
     }
-    out.written_total += written;
+    if (written < 0 ||
+        !json_checked_int_add(&out.written_total, (size_t)written)) {
+      return -1;
+    }
     return out.written_total;
   case JSONBoolean: {
     const JSON_Boolean boolean_value = json_value_get_boolean(value);
@@ -1345,7 +1390,10 @@ static int json_serialize_to_buffer_r(const JSON_Value *value, char *buf,
     if (out.cursor != nullptr) {
       out.cursor += written;
     }
-    out.written_total += written;
+    if (written < 0 ||
+        !json_checked_int_add(&out.written_total, (size_t)written)) {
+      return -1;
+    }
     return out.written_total;
   }
   case JSONNull:
@@ -1483,7 +1531,9 @@ static int json_serialize_string(const char *string, size_t len, char *buf) {
         out.cursor[0] = c;
         out.cursor += 1;
       }
-      out.written_total += 1;
+      if (!json_checked_int_add(&out.written_total, 1U)) {
+        return -1;
+      }
       break;
     }
   }
@@ -2092,6 +2142,9 @@ JSON_Status json_array_remove(JSON_Array *array, size_t ix) {
     return JSONFailure;
   }
   json_value_free(json_array_get_value(array, ix));
+  if ((json_array_get_count(array) - 1U - ix) > (SIZE_MAX / sizeof(JSON_Value *))) {
+    return JSONFailure;
+  }
   to_move_bytes = (json_array_get_count(array) - 1 - ix) * sizeof(JSON_Value *);
   memmove(array->items + ix, array->items + ix + 1, to_move_bytes);
   array->count -= 1;

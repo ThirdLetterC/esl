@@ -40,6 +40,10 @@ esl_config_open_file(esl_config_t *cfg, const char *file_path) {
   const char *path = nullptr;
   char path_buf[1024];
 
+  if (cfg == nullptr || file_path == nullptr || *file_path == '\0') {
+    return 0;
+  }
+
   if (file_path[0] == '/') {
     path = file_path;
   } else {
@@ -94,6 +98,9 @@ esl_config_open_file(esl_config_t *cfg, const char *file_path) {
 }
 
 ESL_DECLARE(void) esl_config_close_file(esl_config_t *cfg) {
+  if (cfg == nullptr) {
+    return;
+  }
 
   if (cfg->file) {
     fclose(cfg->file);
@@ -107,6 +114,9 @@ esl_config_next_pair(esl_config_t *cfg, char **var, char **val) {
   int ret = 0;
   char *p, *end;
 
+  if (var == nullptr || val == nullptr) {
+    return 0;
+  }
   *var = *val = nullptr;
 
   if (!cfg || !cfg->file) {
@@ -153,14 +163,21 @@ esl_config_next_pair(esl_config_t *cfg, char **var, char **val) {
       break;
     }
 
+    end = *var + strlen(*var);
+
     if ((end = strchr(*var, ';')) && *(end + 1) == *end) {
       *end = '\0';
       end--;
     } else if ((end = strchr(*var, '\n')) != nullptr) {
-      if (*(end - 1) == '\r') {
+      if (end > *var && *(end - 1) == '\r') {
         end--;
       }
       *end = '\0';
+    } else {
+      if (end > *var && *(end - 1) == '\r') {
+        end--;
+        *end = '\0';
+      }
     }
 
     p = *var;
@@ -184,9 +201,12 @@ esl_config_next_pair(esl_config_t *cfg, char **var, char **val) {
         (*val)++;
       }
 
-      while (p != *var && (*p == ' ' || *p == '\t')) {
+      while (p >= *var && (*p == ' ' || *p == '\t')) {
         *p = '\0';
-        p--;
+        if (p == *var) {
+          break;
+        }
+        --p;
       }
 
       p = *val;
