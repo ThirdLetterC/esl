@@ -51,6 +51,8 @@
 
 #pragma once
 
+#include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -73,17 +75,40 @@ static const char ESL_CONFIG_DIR[] = "/etc/openesl";
          ((*file == '/') || strstr(file, ESL_URL_SEPARATOR) != nullptr);
 }
 
+[[nodiscard]] static inline bool esl_parse_ll_strict(const char *expr,
+                                                     long long *out) {
+  char *endptr = nullptr;
+  long long value = 0;
+
+  if (expr == nullptr || out == nullptr || *expr == '\0') {
+    return false;
+  }
+
+  errno = 0;
+  value = strtoll(expr, &endptr, 10);
+
+  if (errno == ERANGE || endptr == expr || endptr == nullptr ||
+      *endptr != '\0') {
+    return false;
+  }
+
+  *out = value;
+  return true;
+}
+
 /*!
   \brief Evaluate the truthfullness of a string expression
   \param expr a string expression
   \return true or false
 */
 [[maybe_unused]] static inline bool esl_true(const char *expr) {
+  long long parsed_value = 0;
+
   return (expr != nullptr) &&
          (!strcasecmp(expr, "yes") || !strcasecmp(expr, "on") ||
           !strcasecmp(expr, "true") || !strcasecmp(expr, "enabled") ||
           !strcasecmp(expr, "active") || !strcasecmp(expr, "allow") ||
-          atoi(expr));
+          (esl_parse_ll_strict(expr, &parsed_value) && parsed_value != 0));
 }
 
 /*!
@@ -92,11 +117,13 @@ static const char ESL_CONFIG_DIR[] = "/etc/openesl";
   \return true or false
 */
 [[maybe_unused]] static inline bool esl_false(const char *expr) {
+  long long parsed_value = 0;
+
   return (expr != nullptr) &&
          (!strcasecmp(expr, "no") || !strcasecmp(expr, "off") ||
           !strcasecmp(expr, "false") || !strcasecmp(expr, "disabled") ||
           !strcasecmp(expr, "inactive") || !strcasecmp(expr, "disallow") ||
-          !atoi(expr));
+          (esl_parse_ll_strict(expr, &parsed_value) && parsed_value == 0));
 }
 
 typedef struct esl_config esl_config_t;

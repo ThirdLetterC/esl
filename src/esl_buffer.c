@@ -33,8 +33,9 @@
 
 #include "esl/esl_buffer.h"
 #include "esl/esl.h"
+#include <stdatomic.h>
 
-static unsigned buffer_id = 0;
+static _Atomic unsigned buffer_id = 0;
 
 struct esl_buffer {
   unsigned char *data;
@@ -77,7 +78,8 @@ esl_buffer_create(esl_buffer_t **buffer, esl_size_t blocksize,
 
     new_buffer->max_len = max_len;
     new_buffer->datalen = start_len;
-    new_buffer->id = buffer_id++;
+    new_buffer->id = atomic_fetch_add_explicit(&buffer_id, 1u,
+                                               memory_order_relaxed);
     new_buffer->blocksize = blocksize;
     new_buffer->head = new_buffer->data;
 
@@ -283,6 +285,12 @@ esl_buffer_write(esl_buffer_t *buffer, const void *data, esl_size_t datalen) {
 
   if (buffer->used > buffer->datalen ||
       buffer->actually_used > buffer->datalen) {
+    return 0;
+  }
+  if (datalen > (SIZE_MAX - buffer->used)) {
+    return 0;
+  }
+  if (buffer->max_len && buffer->used > buffer->max_len) {
     return 0;
   }
   if (buffer->max_len && datalen > (buffer->max_len - buffer->used)) {

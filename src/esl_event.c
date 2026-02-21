@@ -35,7 +35,35 @@
 #include "esl/esl.h"
 #include "esl/esl_json.h"
 #include <ctype.h>
+#include <errno.h>
 #include <limits.h>
+
+constexpr size_t ESL_EVENT_MAX_BODY_LENGTH = 16'777'216;
+constexpr size_t ESL_EVENT_JSON_MAX_LENGTH = 16'777'216;
+constexpr size_t ESL_EVENT_JSON_MAX_HEADERS = 4'096;
+constexpr size_t ESL_EVENT_JSON_MAX_ARRAY_ITEMS = 4'096;
+constexpr size_t ESL_EVENT_JSON_MAX_HEADER_NAME_LENGTH = 1'024;
+
+[[nodiscard]] static bool esl_string_len_within_limit(const char *s,
+                                                      size_t limit,
+                                                      size_t *out_len) {
+  size_t i = 0;
+
+  if (s == nullptr) {
+    return false;
+  }
+
+  for (i = 0; i <= limit; i++) {
+    if (s[i] == '\0') {
+      if (out_len != nullptr) {
+        *out_len = i;
+      }
+      return true;
+    }
+  }
+
+  return false;
+}
 
 static char *my_dup(const char *s) {
   if (s == nullptr) {
@@ -160,12 +188,19 @@ static const char *EVENT_NAMES[] = {"CUSTOM",
                                     "ALL"};
 
 ESL_DECLARE(const char *) esl_event_name(esl_event_types_t event) {
+  if (event < ESL_EVENT_CUSTOM || event > ESL_EVENT_ALL) {
+    return "INVALID";
+  }
   return EVENT_NAMES[event];
 }
 
 ESL_DECLARE(esl_status_t)
 esl_name_event(const char *name, esl_event_types_t *type) {
   esl_event_types_t x;
+
+  if (name == nullptr || type == nullptr) {
+    return ESL_FAIL;
+  }
 
   for (x = 0; x <= ESL_EVENT_ALL; x++) {
     if ((strlen(name) > 13 && !strcasecmp(name + 13, EVENT_NAMES[x])) ||
@@ -240,13 +275,41 @@ ESL_DECLARE(const char *) esl_priority_name(esl_priority_t priority) {
 
 ESL_DECLARE(esl_status_t)
 esl_event_set_priority(esl_event_t *event, esl_priority_t priority) {
+  if (event == nullptr) {
+    return ESL_FAIL;
+  }
+
   event->priority = priority;
-  esl_event_add_header_string(event, ESL_STACK_TOP, "priority",
-                              esl_priority_name(priority));
-  return ESL_SUCCESS;
+  return esl_event_add_header_string(event, ESL_STACK_TOP, "priority",
+                                     esl_priority_name(priority));
 }
 
 constexpr esl_ssize_t ESL_HASH_KEY_STRING = -1;
+constexpr int ESL_EVENT_HEADER_INDEX_MAX = 4'000;
+
+[[nodiscard]] static bool esl_parse_event_header_index(const char *expr,
+                                                       int *out_index) {
+  char *endptr = nullptr;
+  long parsed = 0;
+
+  if (expr == nullptr || out_index == nullptr) {
+    return false;
+  }
+
+  errno = 0;
+  parsed = strtol(expr, &endptr, 10);
+  if (errno == ERANGE || endptr == expr || endptr == nullptr ||
+      *endptr != ']' || *(endptr + 1) != '\0') {
+    return false;
+  }
+
+  if (parsed < 0 || parsed > ESL_EVENT_HEADER_INDEX_MAX) {
+    return false;
+  }
+
+  *out_index = (int)parsed;
+  return true;
+}
 
 static unsigned int esl_ci_hashfunc_default(const char *char_key,
                                             esl_ssize_t *klen)
@@ -277,9 +340,7 @@ esl_event_get_header_ptr(esl_event_t *event, const char *header_name) {
   esl_ssize_t hlen = -1;
   unsigned long hash = 0;
 
-  esl_assert(event);
-
-  if (!header_name)
+  if (event == nullptr || header_name == nullptr)
     return nullptr;
 
   hash = esl_ci_hashfunc_default(header_name, &hlen);
@@ -295,6 +356,10 @@ esl_event_get_header_ptr(esl_event_t *event, const char *header_name) {
 ESL_DECLARE(char *)
 esl_event_get_header_idx(esl_event_t *event, const char *header_name, int idx) {
   esl_event_header_t *hp;
+
+  if (event == nullptr) {
+    return nullptr;
+  }
 
   if ((hp = esl_event_get_header_ptr(event, header_name))) {
     if (idx > -1) {
@@ -325,6 +390,10 @@ esl_event_del_header_val(esl_event_t *event, const char *header_name,
   int x = 0;
   esl_ssize_t hlen = -1;
   unsigned long hash = 0;
+
+  if (event == nullptr || header_name == nullptr) {
+    return ESL_FAIL;
+  }
 
   tp = event->headers;
   while (tp) {
@@ -415,11 +484,13 @@ ESL_DECLARE(int)
 esl_event_add_array(esl_event_t *event, const char *var, const char *val) {
   char *data;
   char **array;
-  int max = 0;
+  size_t max = 0;
+  unsigned int count = 0;
   const char *p;
-  int i;
+  unsigned int i;
 
-  if (strlen(val) < 8) {
+  if (event == nullptr || var == nullptr || val == nullptr ||
+      strlen(val) < 8) {
     return -1;
   }
 
@@ -428,6 +499,9 @@ esl_event_add_array(esl_event_t *event, const char *var, const char *val) {
   max = 1;
 
   while ((p = strstr(p, "|:"))) {
+    if (max == UINT_MAX) {
+      return -1;
+    }
     max++;
     p += 2;
   }
@@ -443,10 +517,15 @@ esl_event_add_array(esl_event_t *event, const char *var, const char *val) {
     return -1;
   }
 
-  esl_separate_string_string(data, "|:", array, max);
+  count = esl_separate_string_string(data, "|:", array, (unsigned int)max);
 
-  for (i = 0; i < max; i++) {
-    esl_event_add_header_string(event, ESL_STACK_PUSH, var, array[i]);
+  for (i = 0; i < count; i++) {
+    if (esl_event_add_header_string(event, ESL_STACK_PUSH, var, array[i]) !=
+        ESL_SUCCESS) {
+      free(array);
+      free(data);
+      return -1;
+    }
   }
 
   free(array);
@@ -480,7 +559,10 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
 
   if ((index_ptr = strchr(header_name, '['))) {
     index_ptr++;
-    index = atoi(index_ptr);
+    if (!esl_parse_event_header_index(index_ptr, &index)) {
+      FREE(data);
+      return ESL_FAIL;
+    }
     real_header_name = DUP(header_name);
     if (real_header_name == nullptr) {
       FREE(data);
@@ -513,7 +595,7 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event,
     if (header || (header = esl_event_get_header_ptr(event, header_name))) {
 
       if (index_ptr) {
-        if (index > -1 && index <= 4000) {
+        if (index > -1 && index <= ESL_EVENT_HEADER_INDEX_MAX) {
           if (index < header->idx) {
             char *replacement = DUP(data);
             if (replacement == nullptr) {
@@ -762,9 +844,18 @@ esl_event_add_header_string(esl_event_t *event, esl_stack_t stack,
 
 ESL_DECLARE(esl_status_t)
 esl_event_set_body(esl_event_t *event, const char *body) {
+  size_t body_len = 0;
+
   if (event == nullptr) {
     return ESL_FAIL;
   }
+
+  if (body != nullptr &&
+      !esl_string_len_within_limit(body, ESL_EVENT_MAX_BODY_LENGTH,
+                                   &body_len)) {
+    return ESL_FAIL;
+  }
+
   esl_safe_free(event->body);
 
   if (body) {
@@ -780,29 +871,40 @@ esl_event_set_body(esl_event_t *event, const char *body) {
 ESL_DECLARE(esl_status_t)
 esl_event_add_body(esl_event_t *event, const char *fmt, ...) {
   int ret = 0;
-  char *data;
+  char *data = nullptr;
+  size_t data_len = 0;
 
   va_list ap;
-  if (fmt) {
-    va_start(ap, fmt);
-    ret = esl_vasprintf(&data, fmt, ap);
-    va_end(ap);
-
-    if (ret == -1) {
-      return ESL_FAIL;
-    } else {
-      esl_safe_free(event->body);
-      event->body = data;
-      return ESL_SUCCESS;
-    }
-  } else {
+  if (event == nullptr || fmt == nullptr) {
     return ESL_FAIL;
   }
+
+  va_start(ap, fmt);
+  ret = esl_vasprintf(&data, fmt, ap);
+  va_end(ap);
+
+  if (ret < 0 || data == nullptr) {
+    return ESL_FAIL;
+  }
+  if (!esl_string_len_within_limit(data, ESL_EVENT_MAX_BODY_LENGTH, &data_len)) {
+    free(data);
+    return ESL_FAIL;
+  }
+
+  esl_safe_free(event->body);
+  event->body = data;
+  return ESL_SUCCESS;
 }
 
 ESL_DECLARE(void) esl_event_destroy(esl_event_t **event) {
-  esl_event_t *ep = *event;
+  esl_event_t *ep = nullptr;
   esl_event_header_t *hp, *this;
+
+  if (event == nullptr) {
+    return;
+  }
+
+  ep = *event;
 
   if (ep) {
     for (hp = ep->headers; hp;) {
@@ -969,6 +1071,10 @@ esl_event_serialize(esl_event_t *event, char **str, bool encode) {
     /* handle any bad things in the string like newlines : etc that screw up the
      * serialized format */
 
+    if (hp->value == nullptr) {
+      goto fail;
+    }
+
     if (encode) {
       esl_url_encode(hp->value, encode_buf, encode_len);
     } else {
@@ -1062,6 +1168,16 @@ fail:
 
 ESL_DECLARE(esl_status_t)
 esl_event_create_json(esl_event_t **event, const char *json) {
+  if (event == nullptr || json == nullptr) {
+    return ESL_FAIL;
+  }
+
+  *event = nullptr;
+
+  if (!esl_string_len_within_limit(json, ESL_EVENT_JSON_MAX_LENGTH, nullptr)) {
+    return ESL_FAIL;
+  }
+
   cJSON *cj = cJSON_Parse(json);
   if (cj == nullptr) {
     return (esl_status_t) false;
@@ -1080,12 +1196,24 @@ esl_event_create_json(esl_event_t **event, const char *json) {
   }
 
   const size_t count = json_object_get_count(root);
+  if (count > ESL_EVENT_JSON_MAX_HEADERS) {
+    esl_event_destroy(&new_event);
+    cJSON_Delete(cj);
+    return ESL_FAIL;
+  }
+
   for (size_t i = 0; i < count; i++) {
     const char *name = json_object_get_name(root, i);
     JSON_Value *value = json_object_get_value_at(root, i);
 
     if (name == nullptr || value == nullptr) {
       continue;
+    }
+    if (!esl_string_len_within_limit(name, ESL_EVENT_JSON_MAX_HEADER_NAME_LENGTH,
+                                     nullptr)) {
+      esl_event_destroy(&new_event);
+      cJSON_Delete(cj);
+      return ESL_FAIL;
     }
 
     switch (json_value_get_type(value)) {
@@ -1094,16 +1222,35 @@ esl_event_create_json(esl_event_t **event, const char *json) {
       if (text == nullptr) {
         break;
       }
+      if (!esl_string_len_within_limit(text, ESL_EVENT_JSON_MAX_LENGTH,
+                                       nullptr)) {
+        esl_event_destroy(&new_event);
+        cJSON_Delete(cj);
+        return ESL_FAIL;
+      }
 
       if (!strcasecmp(name, "_body")) {
-        esl_event_add_body(new_event, text, ESL_VA_NONE);
+        if (esl_event_set_body(new_event, text) != ESL_SUCCESS) {
+          esl_event_destroy(&new_event);
+          cJSON_Delete(cj);
+          return ESL_FAIL;
+        }
       } else {
         if (!strcasecmp(name, "event-name")) {
-          esl_event_del_header(new_event, "event-name");
-          esl_name_event(text, &new_event->event_id);
+          (void)esl_event_del_header(new_event, "event-name");
+          if (esl_name_event(text, &new_event->event_id) != ESL_SUCCESS) {
+            esl_event_destroy(&new_event);
+            cJSON_Delete(cj);
+            return ESL_FAIL;
+          }
         }
 
-        esl_event_add_header_string(new_event, ESL_STACK_BOTTOM, name, text);
+        if (esl_event_add_header_string(new_event, ESL_STACK_BOTTOM, name,
+                                        text) != ESL_SUCCESS) {
+          esl_event_destroy(&new_event);
+          cJSON_Delete(cj);
+          return ESL_FAIL;
+        }
       }
       break;
     }
@@ -1114,10 +1261,25 @@ esl_event_create_json(esl_event_t **event, const char *json) {
       }
 
       const size_t array_size = json_array_get_count(array);
+      if (array_size > ESL_EVENT_JSON_MAX_ARRAY_ITEMS) {
+        esl_event_destroy(&new_event);
+        cJSON_Delete(cj);
+        return ESL_FAIL;
+      }
       for (size_t j = 0; j < array_size; j++) {
         const char *element = json_array_get_string(array, j);
-        if (element != nullptr) {
-          esl_event_add_header_string(new_event, ESL_STACK_PUSH, name, element);
+        if (element == nullptr ||
+            !esl_string_len_within_limit(element, ESL_EVENT_JSON_MAX_LENGTH,
+                                         nullptr)) {
+          esl_event_destroy(&new_event);
+          cJSON_Delete(cj);
+          return ESL_FAIL;
+        }
+        if (esl_event_add_header_string(new_event, ESL_STACK_PUSH, name,
+                                        element) != ESL_SUCCESS) {
+          esl_event_destroy(&new_event);
+          cJSON_Delete(cj);
+          return ESL_FAIL;
         }
       }
       break;
@@ -1136,39 +1298,96 @@ ESL_DECLARE(esl_status_t)
 esl_event_serialize_json(esl_event_t *event, char **str) {
   esl_event_header_t *hp;
   cJSON *cj;
+  JSON_Object *obj;
+
+  if (event == nullptr || str == nullptr) {
+    return ESL_FAIL;
+  }
 
   *str = nullptr;
 
   cj = cJSON_CreateObject();
+  if (cj == nullptr) {
+    return ESL_FAIL;
+  }
+  obj = cjson_get_object(cj);
+  if (obj == nullptr) {
+    cJSON_Delete(cj);
+    return ESL_FAIL;
+  }
 
   for (hp = event->headers; hp; hp = hp->next) {
+    if (hp->name == nullptr ||
+        !esl_string_len_within_limit(hp->name, ESL_EVENT_JSON_MAX_HEADER_NAME_LENGTH,
+                                     nullptr)) {
+      goto fail;
+    }
+
     if (hp->idx) {
-      cJSON *a = cJSON_CreateArray();
+      JSON_Array *array = nullptr;
+      cJSON *array_value = cJSON_CreateArray();
       int i;
 
-      for (i = 0; i < hp->idx; i++) {
-        cJSON_AddItemToArray(a, cJSON_CreateString(hp->array[i]));
+      if (array_value == nullptr) {
+        goto fail;
+      }
+      array = cjson_get_array(array_value);
+      if (array == nullptr) {
+        cJSON_Delete(array_value);
+        goto fail;
       }
 
-      cJSON_AddItemToObject(cj, hp->name, a);
+      for (i = 0; i < hp->idx; i++) {
+        if (hp->array[i] == nullptr ||
+            !esl_string_len_within_limit(hp->array[i], ESL_EVENT_JSON_MAX_LENGTH,
+                                         nullptr) ||
+            json_array_append_string(array, hp->array[i]) != JSONSuccess) {
+          cJSON_Delete(array_value);
+          goto fail;
+        }
+      }
 
+      if (json_object_set_value(obj, hp->name, array_value) != JSONSuccess) {
+        cJSON_Delete(array_value);
+        goto fail;
+      }
     } else {
-      cJSON_AddItemToObject(cj, hp->name, cJSON_CreateString(hp->value));
+      if (hp->value == nullptr ||
+          !esl_string_len_within_limit(hp->value, ESL_EVENT_JSON_MAX_LENGTH,
+                                       nullptr) ||
+          json_object_set_string(obj, hp->name, hp->value) != JSONSuccess) {
+        goto fail;
+      }
     }
   }
 
   if (event->body) {
-    int blen = (int)strlen(event->body);
-    char tmp[25];
+    const auto blen = strlen(event->body);
+    char tmp[32];
 
-    esl_snprintf(tmp, sizeof(tmp), "%d", blen);
+    if (blen > ESL_EVENT_MAX_BODY_LENGTH) {
+      goto fail;
+    }
 
-    cJSON_AddItemToObject(cj, "Content-Length", cJSON_CreateString(tmp));
-    cJSON_AddItemToObject(cj, "_body", cJSON_CreateString(event->body));
+    esl_snprintf(tmp, sizeof(tmp), "%zu", blen);
+
+    if (json_object_set_string(obj, "Content-Length", tmp) != JSONSuccess ||
+        json_object_set_string(obj, "_body", event->body) != JSONSuccess) {
+      goto fail;
+    }
   }
 
   *str = cJSON_Print(cj);
   cJSON_Delete(cj);
 
+  if (*str == nullptr) {
+    return ESL_FAIL;
+  }
+
   return ESL_SUCCESS;
+
+fail:
+  cJSON_Delete(cj);
+  *str = nullptr;
+  return ESL_FAIL;
 }

@@ -36,6 +36,24 @@
 #endif
 
 typedef JSON_Value cJSON;
+constexpr size_t ESL_JSON_PARSE_MAX_LENGTH = 16'777'216;
+
+[[nodiscard]] static inline bool cjson_text_len_within_limit(const char *text,
+                                                             size_t limit) {
+  size_t i = 0;
+
+  if (text == nullptr) {
+    return false;
+  }
+
+  for (i = 0; i <= limit; i++) {
+    if (text[i] == '\0') {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 [[nodiscard]] static inline bool cjson_is_type(const cJSON *value,
                                                JSON_Value_Type expected) {
@@ -65,7 +83,10 @@ cjson_get_array_const(const cJSON *value) {
 }
 
 [[nodiscard]] static inline cJSON *cJSON_Parse(const char *text) {
-  return text != nullptr ? json_parse_string(text) : nullptr;
+  if (!cjson_text_len_within_limit(text, ESL_JSON_PARSE_MAX_LENGTH)) {
+    return nullptr;
+  }
+  return json_parse_string(text);
 }
 
 [[nodiscard]] static inline cJSON *cJSON_CreateObject() {

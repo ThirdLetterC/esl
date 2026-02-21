@@ -23,6 +23,7 @@
 #include "esl/esl.h"
 
 #include <pthread.h>
+#include <stdatomic.h>
 
 struct esl_mutex {
   pthread_mutex_t mutex;
@@ -36,10 +37,10 @@ struct esl_thread {
   pthread_attr_t attribute;
 };
 
-size_t thread_default_stacksize = 240 * 1024;
+static _Atomic size_t thread_default_stacksize = 240 * 1024;
 
 void esl_thread_override_default_stacksize(size_t size) {
-  thread_default_stacksize = size;
+  atomic_store_explicit(&thread_default_stacksize, size, memory_order_relaxed);
 }
 
 static void *thread_launch(void *args) {
@@ -53,7 +54,9 @@ static void *thread_launch(void *args) {
 
 ESL_DECLARE(esl_status_t)
 esl_thread_create_detached(esl_thread_function_t func, void *data) {
-  return esl_thread_create_detached_ex(func, data, thread_default_stacksize);
+  const auto stacksize =
+      atomic_load_explicit(&thread_default_stacksize, memory_order_relaxed);
+  return esl_thread_create_detached_ex(func, data, stacksize);
 }
 
 esl_status_t esl_thread_create_detached_ex(esl_thread_function_t func,
@@ -154,18 +157,22 @@ done:
 }
 
 ESL_DECLARE(esl_status_t) esl_mutex_destroy(esl_mutex_t **mutex) {
+  esl_mutex_t *mp = nullptr;
+
   if (mutex == nullptr) {
     return ESL_FAIL;
   }
 
-  esl_mutex_t *mp = *mutex;
-  *mutex = nullptr;
-  if (!mp) {
+  mp = *mutex;
+  if (mp == nullptr) {
     return ESL_FAIL;
   }
+
   if (pthread_mutex_destroy(&mp->mutex)) {
     return ESL_FAIL;
   }
+
+  *mutex = nullptr;
   free(mp);
   return ESL_SUCCESS;
 }
