@@ -82,4 +82,29 @@ pub fn build(b: *std.Build) void {
 
     const client_step = b.step("testclient", "Build the sample test client");
     client_step.dependOn(&testclient.step);
+
+    const tests_module = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .sanitize_c = if (enable_sanitize) .full else null,
+        .omit_frame_pointer = if (enable_sanitize) false else null,
+    });
+    tests_module.addIncludePath(b.path("include"));
+    tests_module.addCSourceFiles(.{
+        .files = &.{"testing/tests.c"},
+        .flags = c_flags,
+        .language = .c,
+    });
+    tests_module.linkLibrary(esl);
+    tests_module.link_libc = true;
+    tests_module.linkSystemLibrary("pthread", .{});
+
+    const tests = b.addExecutable(.{
+        .name = "esl-tests",
+        .root_module = tests_module,
+    });
+
+    const run_tests = b.addRunArtifact(tests);
+    const test_step = b.step("test", "Build and run unit tests");
+    test_step.dependOn(&run_tests.step);
 }
