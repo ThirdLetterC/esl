@@ -44,9 +44,8 @@ constexpr size_t ESL_EVENT_JSON_MAX_HEADERS = 4'096;
 constexpr size_t ESL_EVENT_JSON_MAX_ARRAY_ITEMS = 4'096;
 constexpr size_t ESL_EVENT_JSON_MAX_HEADER_NAME_LENGTH = 1'024;
 
-[[nodiscard]] static bool esl_string_len_within_limit(const char *s,
-                                                      size_t limit,
-                                                      size_t *out_len) {
+[[nodiscard]] static bool
+esl_string_len_within_limit(const char *s, size_t limit, size_t *out_len) {
   size_t i = 0;
 
   if (s == nullptr) {
@@ -489,8 +488,7 @@ esl_event_add_array(esl_event_t *event, const char *var, const char *val) {
   const char *p;
   unsigned int i;
 
-  if (event == nullptr || var == nullptr || val == nullptr ||
-      strlen(val) < 8) {
+  if (event == nullptr || var == nullptr || val == nullptr || strlen(val) < 8) {
     return -1;
   }
 
@@ -850,9 +848,8 @@ esl_event_set_body(esl_event_t *event, const char *body) {
     return ESL_FAIL;
   }
 
-  if (body != nullptr &&
-      !esl_string_len_within_limit(body, ESL_EVENT_MAX_BODY_LENGTH,
-                                   &body_len)) {
+  if (body != nullptr && !esl_string_len_within_limit(
+                             body, ESL_EVENT_MAX_BODY_LENGTH, &body_len)) {
     return ESL_FAIL;
   }
 
@@ -886,7 +883,8 @@ esl_event_add_body(esl_event_t *event, const char *fmt, ...) {
   if (ret < 0 || data == nullptr) {
     return ESL_FAIL;
   }
-  if (!esl_string_len_within_limit(data, ESL_EVENT_MAX_BODY_LENGTH, &data_len)) {
+  if (!esl_string_len_within_limit(data, ESL_EVENT_MAX_BODY_LENGTH,
+                                   &data_len)) {
     free(data);
     return ESL_FAIL;
   }
@@ -1209,8 +1207,8 @@ esl_event_create_json(esl_event_t **event, const char *json) {
     if (name == nullptr || value == nullptr) {
       continue;
     }
-    if (!esl_string_len_within_limit(name, ESL_EVENT_JSON_MAX_HEADER_NAME_LENGTH,
-                                     nullptr)) {
+    if (!esl_string_len_within_limit(
+            name, ESL_EVENT_JSON_MAX_HEADER_NAME_LENGTH, nullptr)) {
       esl_event_destroy(&new_event);
       cJSON_Delete(cj);
       return ESL_FAIL;
@@ -1318,8 +1316,8 @@ esl_event_serialize_json(esl_event_t *event, char **str) {
 
   for (hp = event->headers; hp; hp = hp->next) {
     if (hp->name == nullptr ||
-        !esl_string_len_within_limit(hp->name, ESL_EVENT_JSON_MAX_HEADER_NAME_LENGTH,
-                                     nullptr)) {
+        !esl_string_len_within_limit(
+            hp->name, ESL_EVENT_JSON_MAX_HEADER_NAME_LENGTH, nullptr)) {
       goto fail;
     }
 
@@ -1339,8 +1337,8 @@ esl_event_serialize_json(esl_event_t *event, char **str) {
 
       for (i = 0; i < hp->idx; i++) {
         if (hp->array[i] == nullptr ||
-            !esl_string_len_within_limit(hp->array[i], ESL_EVENT_JSON_MAX_LENGTH,
-                                         nullptr) ||
+            !esl_string_len_within_limit(hp->array[i],
+                                         ESL_EVENT_JSON_MAX_LENGTH, nullptr) ||
             json_array_append_string(array, hp->array[i]) != JSONSuccess) {
           cJSON_Delete(array_value);
           goto fail;

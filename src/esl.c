@@ -918,8 +918,8 @@ esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
       goto fail;
     }
   } else {
-    sendbuf_len = snprintf(sendbuf, sizeof(sendbuf), "userauth %s:%s\n\n",
-                           user, password);
+    sendbuf_len = snprintf(sendbuf, sizeof(sendbuf), "userauth %s:%s\n\n", user,
+                           password);
     if (sendbuf_len < 0 || (size_t)sendbuf_len >= sizeof(sendbuf)) {
       snprintf(handle->err, sizeof(handle->err), "Authentication Error");
       goto fail;
@@ -1477,8 +1477,8 @@ ESL_DECLARE(esl_status_t) esl_send(esl_handle_t *handle, const char *cmd) {
       if (just_sent < 0 &&
           (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)) {
         if (errno != EINTR) {
-          const int wait_status = esl_wait_sock(handle->sock, 1000,
-                                                ESL_POLL_WRITE | ESL_POLL_ERROR);
+          const int wait_status = esl_wait_sock(
+              handle->sock, 1000, ESL_POLL_WRITE | ESL_POLL_ERROR);
           if (wait_status <= 0 || (wait_status & ESL_POLL_ERROR)) {
             handle->connected = 0;
             esl_set_last_error(handle, errno);

@@ -78,8 +78,8 @@ esl_buffer_create(esl_buffer_t **buffer, esl_size_t blocksize,
 
     new_buffer->max_len = max_len;
     new_buffer->datalen = start_len;
-    new_buffer->id = atomic_fetch_add_explicit(&buffer_id, 1u,
-                                               memory_order_relaxed);
+    new_buffer->id =
+        atomic_fetch_add_explicit(&buffer_id, 1u, memory_order_relaxed);
     new_buffer->blocksize = blocksize;
     new_buffer->head = new_buffer->data;
 

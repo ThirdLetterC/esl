@@ -562,8 +562,7 @@ static JSON_Status json_object_grow_and_rehash(JSON_Object *object) {
   if (object->cell_capacity > (SIZE_MAX / 2U)) {
     return JSONFailure;
   }
-  size_t new_capacity =
-      max_size(object->cell_capacity * 2U, starting_capacity);
+  size_t new_capacity = max_size(object->cell_capacity * 2U, starting_capacity);
   JSON_Status res = json_object_init(&new_object, new_capacity);
   if (res != JSONSuccess) {
     return JSONFailure;
@@ -2142,7 +2141,8 @@ JSON_Status json_array_remove(JSON_Array *array, size_t ix) {
     return JSONFailure;
   }
   json_value_free(json_array_get_value(array, ix));
-  if ((json_array_get_count(array) - 1U - ix) > (SIZE_MAX / sizeof(JSON_Value *))) {
+  if ((json_array_get_count(array) - 1U - ix) >
+      (SIZE_MAX / sizeof(JSON_Value *))) {
     return JSONFailure;
   }
   to_move_bytes = (json_array_get_count(array) - 1 - ix) * sizeof(JSON_Value *);
