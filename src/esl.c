@@ -56,6 +56,7 @@ static inline esl_ssize_t esl_clamp_ssize(esl_ssize_t min, esl_ssize_t max,
 }
 
 constexpr esl_size_t ESL_MAX_CONTENT_LENGTH = 16'777'216;
+constexpr esl_size_t ESL_MAX_PACKET_BUFFER_LENGTH = 67'108'864;
 constexpr esl_size_t ESL_MAX_EVENT_PLAIN_HEADERS = 4'096;
 constexpr esl_size_t ESL_MAX_EVENT_PLAIN_LINE_LENGTH = 65'536;
 
@@ -433,8 +434,8 @@ esl_attach_handle(esl_handle_t *handle, esl_socket_t socket,
   }
 
   if (!handle->packet_buf) {
-    if (esl_buffer_create(&handle->packet_buf, BUF_CHUNK, BUF_START, 0) !=
-        ESL_SUCCESS) {
+    if (esl_buffer_create(&handle->packet_buf, BUF_CHUNK, BUF_START,
+                          ESL_MAX_PACKET_BUFFER_LENGTH) != ESL_SUCCESS) {
       if (created_mutex) {
         esl_mutex_destroy(&handle->mutex);
       }
@@ -895,8 +896,8 @@ esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
   }
 
   if (!handle->packet_buf) {
-    if (esl_buffer_create(&handle->packet_buf, BUF_CHUNK, BUF_START, 0) !=
-        ESL_SUCCESS) {
+    if (esl_buffer_create(&handle->packet_buf, BUF_CHUNK, BUF_START,
+                          ESL_MAX_PACKET_BUFFER_LENGTH) != ESL_SUCCESS) {
       snprintf(handle->err, sizeof(handle->err), "Buffer Allocation Error");
       goto fail;
     }
@@ -1319,6 +1320,9 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event) {
 
     if (esl_buffer_write(handle->packet_buf, handle->socket_buf,
                          (esl_size_t)rrval) == 0) {
+      esl_set_last_error(handle, EMSGSIZE);
+      esl_snprintf(handle->err, sizeof(handle->err),
+                   "Inbound packet buffer limit reached");
       goto fail;
     }
   }
@@ -1377,6 +1381,9 @@ esl_recv_event(esl_handle_t *handle, int check_q, esl_event_t **save_event) {
                                   r)) = '\0';
         if (esl_buffer_write(handle->packet_buf, handle->socket_buf,
                              (esl_size_t)r) == 0) {
+          esl_set_last_error(handle, EMSGSIZE);
+          esl_snprintf(handle->err, sizeof(handle->err),
+                       "Inbound packet buffer limit reached");
           free(body);
           goto fail;
         }
