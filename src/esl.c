@@ -55,6 +55,19 @@ static inline esl_ssize_t esl_clamp_ssize(esl_ssize_t min, esl_ssize_t max,
   return esl_min_ssize(max, esl_max_ssize(val, min));
 }
 
+static void esl_secure_clear(void *ptr, size_t len) {
+  volatile unsigned char *bytes = (volatile unsigned char *)ptr;
+
+  if (ptr == nullptr) {
+    return;
+  }
+
+  while (len > 0) {
+    *bytes++ = 0;
+    len--;
+  }
+}
+
 constexpr esl_size_t ESL_MAX_CONTENT_LENGTH = 16'777'216;
 constexpr esl_size_t ESL_MAX_PACKET_BUFFER_LENGTH = 67'108'864;
 constexpr esl_size_t ESL_MAX_EVENT_PLAIN_HEADERS = 4'096;
@@ -124,6 +137,7 @@ const short _esl_C_tolower_[1 + ESL_CTYPE_NUM_CHARS] = {
 const short *_esl_tolower_tab_ = _esl_C_tolower_;
 
 static int esl_safe_strcasecmp(const char *s1, const char *s2);
+static int esl_socket_reuseaddr(esl_socket_t socket);
 
 ESL_DECLARE(int) esl_tolower(int c) {
   if ((unsigned int)c > 255)
@@ -407,6 +421,107 @@ static int sock_setup(esl_handle_t *handle) {
   return ESL_SUCCESS;
 }
 
+static void esl_log_send_command(const char *cmd) {
+  char redacted[384] = "";
+
+  if (cmd == nullptr) {
+    return;
+  }
+
+  if (!strncmp(cmd, "auth ", 5)) {
+    esl_log(ESL_LOG_DEBUG, "SEND\nauth [REDACTED]\n\n");
+    return;
+  }
+
+  if (!strncmp(cmd, "userauth ", 9)) {
+    const char *const credentials = cmd + 9;
+    const char *const separator = strchr(credentials, ':');
+    const char *line_end = strpbrk(credentials, "\r\n");
+
+    if (line_end == nullptr) {
+      line_end = cmd + strlen(cmd);
+    }
+
+    if (separator != nullptr && separator < line_end) {
+      const auto username_len = (size_t)(separator - credentials);
+      if (username_len < sizeof(redacted)) {
+        const auto written =
+            esl_snprintf(redacted, sizeof(redacted), "userauth %.*s:[REDACTED]",
+                         (int)username_len, credentials);
+        if (written > 0 && (size_t)written < sizeof(redacted)) {
+          esl_log(ESL_LOG_DEBUG, "SEND\n%s\n\n", redacted);
+          return;
+        }
+      }
+    }
+
+    esl_log(ESL_LOG_DEBUG, "SEND\nuserauth [REDACTED]\n\n");
+    return;
+  }
+
+  esl_log(ESL_LOG_DEBUG, "SEND\n%s\n", cmd);
+}
+
+[[nodiscard]] static esl_status_t
+esl_open_listener_socket(const char *host, esl_port_t port, int backlog,
+                         esl_socket_t *server_sock) {
+  struct addrinfo hints = {0};
+  struct addrinfo *result = nullptr;
+  struct addrinfo *rp = nullptr;
+  char port_buf[16] = "";
+  const char *bind_host = nullptr;
+  int written = 0;
+
+  if (server_sock == nullptr || backlog <= 0 || port < 0) {
+    return ESL_FAIL;
+  }
+
+  *server_sock = ESL_SOCK_INVALID;
+  bind_host = esl_strlen_zero(host) ? nullptr : host;
+
+  written = esl_snprintf(port_buf, sizeof(port_buf), "%u",
+                         (unsigned int)(uint16_t)port);
+  if (written < 0 || (size_t)written >= sizeof(port_buf)) {
+    return ESL_FAIL;
+  }
+
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_flags = AI_PASSIVE;
+
+  if (getaddrinfo(bind_host, port_buf, &hints, &result) != 0 ||
+      result == nullptr) {
+    return ESL_FAIL;
+  }
+
+  for (rp = result; rp != nullptr; rp = rp->ai_next) {
+    esl_socket_t candidate = ESL_SOCK_INVALID;
+
+    if (rp->ai_addr == nullptr || rp->ai_addrlen > sizeof(struct sockaddr_in)) {
+      continue;
+    }
+
+    candidate = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+    if (candidate == ESL_SOCK_INVALID) {
+      continue;
+    }
+
+    if (esl_socket_reuseaddr(candidate) != 0 ||
+        bind(candidate, rp->ai_addr, rp->ai_addrlen) < 0 ||
+        listen(candidate, backlog) < 0) {
+      closesocket(candidate);
+      continue;
+    }
+
+    *server_sock = candidate;
+    freeaddrinfo(result);
+    return ESL_SUCCESS;
+  }
+
+  freeaddrinfo(result);
+  return ESL_FAIL;
+}
+
 ESL_DECLARE(esl_status_t)
 esl_attach_handle(esl_handle_t *handle, esl_socket_t socket,
                   struct sockaddr_in *addr) {
@@ -672,43 +787,22 @@ static int prepare_sock(esl_socket_t sock) {
 }
 
 ESL_DECLARE(esl_status_t)
-esl_listen([[maybe_unused]] const char *host, esl_port_t port,
-           esl_listen_callback_t callback, void *user_data,
-           esl_socket_t *server_sockP) {
+esl_listen(const char *host, esl_port_t port, esl_listen_callback_t callback,
+           void *user_data, esl_socket_t *server_sockP) {
   esl_socket_t server_sock = ESL_SOCK_INVALID;
-  struct sockaddr_in addr;
   esl_status_t status = ESL_SUCCESS;
 
-  if ((server_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
-    return ESL_FAIL;
-  }
   if (callback == nullptr) {
-    closesocket(server_sock);
     return ESL_FAIL;
   }
 
-  if (server_sockP) {
+  if (esl_open_listener_socket(host, port, 10'000, &server_sock) !=
+      ESL_SUCCESS) {
+    return ESL_FAIL;
+  }
+
+  if (server_sockP != nullptr) {
     *server_sockP = server_sock;
-  }
-
-  if (esl_socket_reuseaddr(server_sock) != 0) {
-    status = ESL_FAIL;
-    goto end;
-  }
-
-  memset(&addr, 0, sizeof(addr));
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  addr.sin_port = htons(port);
-
-  if (bind(server_sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-    status = ESL_FAIL;
-    goto end;
-  }
-
-  if (listen(server_sock, 10000) < 0) {
-    status = ESL_FAIL;
-    goto end;
   }
 
   for (;;) {
@@ -737,46 +831,26 @@ esl_listen([[maybe_unused]] const char *host, esl_port_t port,
   }
 
 end:
-
-  closesocket(server_sock);
+  if (server_sock != ESL_SOCK_INVALID) {
+    closesocket(server_sock);
+  }
 
   return status;
 }
 
 ESL_DECLARE(esl_status_t)
-esl_listen_threaded([[maybe_unused]] const char *host, esl_port_t port,
+esl_listen_threaded(const char *host, esl_port_t port,
                     esl_listen_callback_t callback, void *user_data, int max) {
   esl_socket_t server_sock = ESL_SOCK_INVALID;
-  struct sockaddr_in addr;
   esl_status_t status = ESL_SUCCESS;
   struct thread_handler *handler = nullptr;
 
-  if ((server_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
-    return ESL_FAIL;
-  }
-  if (callback == nullptr) {
-    closesocket(server_sock);
+  if (callback == nullptr || max <= 0) {
     return ESL_FAIL;
   }
 
-  if (esl_socket_reuseaddr(server_sock) != 0) {
-    status = ESL_FAIL;
-    goto end;
-  }
-
-  memset(&addr, 0, sizeof(addr));
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  addr.sin_port = htons(port);
-
-  if (bind(server_sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-    status = ESL_FAIL;
-    goto end;
-  }
-
-  if (listen(server_sock, max) < 0) {
-    status = ESL_FAIL;
-    goto end;
+  if (esl_open_listener_socket(host, port, max, &server_sock) != ESL_SUCCESS) {
+    return ESL_FAIL;
   }
 
   for (;;) {
@@ -821,8 +895,9 @@ esl_listen_threaded([[maybe_unused]] const char *host, esl_port_t port,
   }
 
 end:
-
-  closesocket(server_sock);
+  if (server_sock != ESL_SOCK_INVALID) {
+    closesocket(server_sock);
+  }
 
   return status;
 }
@@ -861,7 +936,7 @@ esl_wait_sock(esl_socket_t sock, uint32_t ms, esl_poll_t flags) {
     if ((pfds[0].revents & POLLOUT)) {
       r |= ESL_POLL_WRITE;
     }
-    if ((pfds[0].revents & POLLERR)) {
+    if ((pfds[0].revents & (POLLERR | POLLHUP | POLLNVAL))) {
       r |= ESL_POLL_ERROR;
     }
   }
@@ -872,7 +947,7 @@ esl_wait_sock(esl_socket_t sock, uint32_t ms, esl_poll_t flags) {
 ESL_DECLARE(esl_status_t)
 esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
                     const char *user, const char *password, uint32_t timeout) {
-  char sendbuf[256];
+  char sendbuf[256] = "";
   int sendbuf_len = 0;
   int rval = 0;
   const char *hval;
@@ -1043,7 +1118,11 @@ esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
     }
   }
 
-  (void)esl_send(handle, sendbuf);
+  if (esl_send(handle, sendbuf) != ESL_SUCCESS) {
+    snprintf(handle->err, sizeof(handle->err), "Authentication Error");
+    goto fail;
+  }
+  esl_secure_clear(sendbuf, sizeof(sendbuf));
 
   if (esl_recv_timed(handle, timeout)) {
     snprintf(handle->err, sizeof(handle->err), "Authentication Error");
@@ -1057,9 +1136,11 @@ esl_connect_timeout(esl_handle_t *handle, const char *host, esl_port_t port,
     goto fail;
   }
 
+  esl_secure_clear(sendbuf, sizeof(sendbuf));
   return ESL_SUCCESS;
 
 fail:
+  esl_secure_clear(sendbuf, sizeof(sendbuf));
 
   (void)esl_disconnect(handle);
 
@@ -1563,7 +1644,7 @@ ESL_DECLARE(esl_status_t) esl_send(esl_handle_t *handle, const char *cmd) {
     return ESL_FAIL;
   }
 
-  esl_log(ESL_LOG_DEBUG, "SEND\n%s\n", cmd);
+  esl_log_send_command(cmd);
 
   out = cmd;
   sent_total = 0;

@@ -31,7 +31,7 @@ application-level authorization.
 - A remote peer can repeatedly connect to listener helpers to consume threads,
   sockets, and memory.
 - A local operator can accidentally expose secrets by enabling verbose logging
-  or by using example credentials unchanged.
+  or by passing sensitive application data through logs.
 - An attacker can force allocation failures or denial-of-service conditions by
   driving the code toward its configured size limits.
 
@@ -56,8 +56,12 @@ application-level authorization.
   JSON helpers, socket wait behavior, and mutex lifecycle.
 - Socket connection setup uses `poll()`-based timeout handling in
   `esl_connect_timeout()` when a timeout is provided.
+- Built-in authentication commands logged by `esl_send()` are redacted to avoid
+  exposing raw ESL passwords in the default debug logger.
 - Partial writes are handled explicitly in `esl_send()`, and the library adds
   the terminating blank line if the caller omitted it.
+- Listener helpers honor the caller-supplied IPv4 bind host instead of always
+  exposing `INADDR_ANY`.
 - The inbound packet buffer is capped at `67'108'864` bytes (64 MiB).
 - Parsed `Content-Length` is capped at `16'777'216` bytes (16 MiB).
 - Plain-text nested event parsing is bounded to:
@@ -84,23 +88,21 @@ application-level authorization.
   channel.
 - Peer identity is not verified. The library authenticates to a server, but it
   does not authenticate the server to the client.
-- The sample client in `examples/testclient.c` targets
-  `localhost:8021` with password `ClueCon`. That is a development example, not
-  a production-safe credential choice.
+- The sample client in `examples/testclient.c` defaults to `localhost:8021`
+  but requires the password to be passed explicitly via argv or `ESL_PASSWORD`.
 - Verbose logging can expose secrets. If the caller enables the default logger
-  or installs a custom logger, outbound commands and inbound event contents may
-  include authentication material, command arguments, headers, and bodies.
-- Secret zeroization is not implemented. Passwords and event data may remain in
-  process memory until overwritten or freed.
+  or installs a custom logger, outbound commands other than the built-in
+  authentication handshake plus inbound event contents may include command
+  arguments, headers, and bodies.
+- Secret zeroization is limited. Authentication command stack buffers are wiped
+  after use, but passwords and event data may still remain elsewhere in process
+  memory until overwritten or freed.
 - `esl_send()` uses plain `send()`. On platforms where `SIGPIPE` is generated
   for a closed peer, the caller should ignore or handle `SIGPIPE` at the
   process level.
 - Thread safety is limited. `esl_handle_t` contains a mutex, but the API should
   not be treated as safe for unsynchronized concurrent access from multiple
   threads. Global logger configuration is also process-global and unsynchronized.
-- `esl_listen()` and `esl_listen_threaded()` currently bind to `INADDR_ANY`;
-  their `host` parameter is ignored. Treat them as exposed on all interfaces
-  unless you restrict reachability externally.
 - `esl_listen_threaded()` creates one detached thread per accepted connection
   and does not enforce authentication, rate limits, or concurrency caps beyond
   the caller-supplied backlog.

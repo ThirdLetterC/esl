@@ -3,7 +3,7 @@
 Pure C client library for the FreeSWITCH Event Socket Library (ESL). It includes the core socket/event handling code under `src/`, public headers under `include/esl/`, and a sample client in `examples/testclient.c` that connects to a running FreeSWITCH instance and prints the output of `api status`.
 
 ## Requirements
-- FreeSWITCH with the event socket listener enabled (default: `localhost:8021`, password `ClueCon`) to run the sample client.
+- FreeSWITCH with the event socket listener enabled to run the sample client.
 - A C23-capable toolchain. The sources use modern C features such as `auto`, `nullptr`, and `[[nodiscard]]`.
 - POSIX: `pthread` is used for threading.
 
@@ -23,13 +23,20 @@ zig build -Dsanitize=true
 Run the example while FreeSWITCH is up:
 
 ```bash
-./zig-out/bin/testclient
+ESL_PASSWORD='your-esl-password' ./zig-out/bin/testclient
 ```
 
-`testclient` connects to `localhost:8021`, sends `api status`, and prints the reply body if present (otherwise the raw reply line).
+Or provide explicit connection settings:
+
+```bash
+./zig-out/bin/testclient 127.0.0.1 8021 'your-esl-password' optional-user
+```
+
+`testclient` defaults to `localhost:8021`, requires an explicit password through `ESL_PASSWORD` or argv, sends `api status`, and prints the reply body if present (otherwise the raw reply line).
 
 ## API highlights
 - `esl_connect` / `esl_connect_timeout` to open authenticated connections.
+- `esl_listen` / `esl_listen_threaded` to bind an outbound listener to the requested IPv4 host.
 - `esl_send_recv` for synchronous command/response, or `esl_send` + `esl_recv_event[_timed]` for manual polling.
 - `esl_events` and `esl_filter` to subscribe to and scope incoming events.
 - `esl_sendevent` / `esl_sendmsg` to push custom events, and `esl_execute` to trigger applications on a channel UUID.

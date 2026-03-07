@@ -272,9 +272,9 @@ typedef void (*esl_listen_callback_t)(esl_socket_t server_sock,
     esl_attach_handle(esl_handle_t *handle, esl_socket_t socket,
                       struct sockaddr_in *addr);
 /*!
-    \brief Will bind to host and callback when event is received. Used for
-   outbound socket.
-    \param host Host to bind to
+    \brief Will bind to the requested IPv4 host and callback when event is
+   received. Used for outbound socket.
+    \param host Host to bind to, or nullptr / empty for all IPv4 interfaces
     \param port Port to bind to
     \param callback Callback that will be called upon data received
 */

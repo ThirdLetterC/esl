@@ -14,6 +14,9 @@ run: build
 clean:
     rm -rf zig-out .zig-cache
 
+test:
+    zig build test
+
 format:
     clang-format -i include/esl/*.h src/*.c examples/testclient.c
 

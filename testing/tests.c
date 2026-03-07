@@ -25,6 +25,13 @@ static void *test_thread_mark_done([[maybe_unused]] esl_thread_t *thread,
   return nullptr;
 }
 
+static void noop_listen_callback([[maybe_unused]] esl_socket_t server_sock,
+                                 [[maybe_unused]] esl_socket_t client_sock,
+                                 [[maybe_unused]] struct sockaddr_in *addr,
+                                 [[maybe_unused]] void *user_data) {
+  return;
+}
+
 [[nodiscard]] static bool run_test_url_encode_decode() {
   const char *raw = "A B+C%";
   char encoded[128] = {0};
@@ -815,6 +822,18 @@ done:
   if (esl_wait_sock(ESL_SOCK_INVALID, 1, ESL_POLL_READ) != ESL_SOCK_INVALID) {
     return false;
   }
+  if (esl_listen("256.256.256.256", 0, noop_listen_callback,
+                 nullptr, nullptr) != ESL_FAIL) {
+    return false;
+  }
+  if (esl_listen_threaded("256.256.256.256", 0,
+                          noop_listen_callback, nullptr, 1) != ESL_FAIL) {
+    return false;
+  }
+  if (esl_listen_threaded("127.0.0.1", 0, noop_listen_callback, nullptr, 0) !=
+      ESL_FAIL) {
+    return false;
+  }
 
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) != 0) {
     return false;
@@ -833,6 +852,11 @@ done:
     goto done;
   }
   if (read(sockets[0], &byte, sizeof(byte)) != (ssize_t)sizeof(byte)) {
+    goto done;
+  }
+  close(sockets[1]);
+  sockets[1] = -1;
+  if ((esl_wait_sock(sockets[0], 50, ESL_POLL_ERROR) & ESL_POLL_ERROR) == 0) {
     goto done;
   }
 
